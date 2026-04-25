@@ -461,6 +461,31 @@ button:disabled {
 }
 
 /* =============================================
+   CHARTS
+   ============================================= */
+.charts-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
+  gap: 20px;
+  margin: 24px 0;
+}
+
+.chart-card {
+  padding: 20px;
+}
+
+.chart-card h3 {
+  font-size: 15px;
+  font-weight: 600;
+  color: #1a1a2e;
+  margin-bottom: 14px;
+}
+
+.chart-card canvas {
+  max-height: 280px;
+}
+
+/* =============================================
    RESPONSIVE — smaller screens
    ============================================= */
 @media (max-width: 768px) {
@@ -504,6 +529,10 @@ button:disabled {
 
   .kpi-grid {
     grid-template-columns: repeat(2, 1fr);
+  }
+
+  .charts-grid {
+    grid-template-columns: 1fr;
   }
 
   table {

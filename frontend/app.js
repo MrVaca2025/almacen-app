@@ -458,16 +458,27 @@ async function registrarIngreso(event) {
 // =============================================
 // E) DASHBOARD
 // Fetches KPIs from GET /api/dashboard and
-// displays them with badges on bajo-stock items.
+// ventas from GET /api/ventas. Renders KPI cards,
+// tables, and Chart.js charts (line + bar).
 // =============================================
+
+// Store chart instances to destroy before re-creating
+let chartVentasDia = null;
+let chartProductos = null;
 
 async function verDashboard() {
   setResultado('Cargando dashboard...');
   try {
-    const res = await fetch(API_BASE + '/api/dashboard');
-    const data = await res.json();
+    // Fetch dashboard KPIs and ventas data in parallel
+    const [resDash, resVentas] = await Promise.all([
+      fetch(API_BASE + '/api/dashboard'),
+      fetch(API_BASE + '/api/ventas')
+    ]);
 
-    if (!res.ok) {
+    const data = await resDash.json();
+    const ventas = resVentas.ok ? await resVentas.json() : [];
+
+    if (!resDash.ok) {
       setResultado('<p class="error">Error: ' + (data.error || 'No se pudo cargar el dashboard') + '</p>');
       return;
     }
@@ -486,6 +497,12 @@ async function verDashboard() {
     html += buildKpiCard('$' + (data.ventas.ventas_totales || 0), 'Ventas totales');
     html += buildKpiCard(data.ventas.numero_ventas || 0, 'Número de ventas');
     html += buildKpiCard('$' + (data.ventas.ticket_promedio || 0), 'Ticket promedio');
+    html += '</div>';
+
+    // Chart containers — canvas elements inside card-style divs
+    html += '<div class="charts-grid">';
+    html += '<div class="chart-card card"><h3>Ventas por día</h3><canvas id="chart-ventas-dia"></canvas></div>';
+    html += '<div class="chart-card card"><h3>Productos más vendidos</h3><canvas id="chart-productos"></canvas></div>';
     html += '</div>';
 
     if (data.productos_bajo_stock && data.productos_bajo_stock.length > 0) {
@@ -519,8 +536,116 @@ async function verDashboard() {
     }
 
     setResultado(html);
+
+    // Render charts after HTML is in the DOM
+    renderCharts(ventas);
   } catch (err) {
     setResultado('<p class="error">Error de conexión: ' + err.message + '</p>');
+  }
+}
+
+// renderCharts — Build and display Chart.js charts from ventas data
+function renderCharts(ventas) {
+  // Destroy previous chart instances if they exist
+  if (chartVentasDia) { chartVentasDia.destroy(); chartVentasDia = null; }
+  if (chartProductos) { chartProductos.destroy(); chartProductos = null; }
+
+  // ---- Chart 1: Ventas por día (line chart) ----
+  // Group sales totals by date (YYYY-MM-DD)
+  const ventasPorDia = {};
+  for (const v of ventas) {
+    const fecha = new Date(v.fecha_venta).toLocaleDateString('es-CL');
+    if (!ventasPorDia[fecha]) {
+      ventasPorDia[fecha] = 0;
+    }
+    ventasPorDia[fecha] += Number(v.total_venta);
+  }
+
+  const fechas = Object.keys(ventasPorDia);
+  const totalesDia = Object.values(ventasPorDia);
+
+  const ctxDia = document.getElementById('chart-ventas-dia');
+  if (ctxDia) {
+    chartVentasDia = new Chart(ctxDia, {
+      type: 'line',
+      data: {
+        labels: fechas,
+        datasets: [{
+          label: 'Total vendido ($)',
+          data: totalesDia,
+          borderColor: '#4361ee',
+          backgroundColor: 'rgba(67, 97, 238, 0.1)',
+          borderWidth: 2,
+          tension: 0.3,
+          fill: true,
+          pointBackgroundColor: '#4361ee',
+          pointRadius: 4
+        }]
+      },
+      options: {
+        responsive: true,
+        plugins: {
+          legend: { display: false }
+        },
+        scales: {
+          y: {
+            beginAtZero: true,
+            ticks: { callback: function (v) { return '$' + v; } }
+          }
+        }
+      }
+    });
+  }
+
+  // ---- Chart 2: Productos más vendidos (bar chart) ----
+  // Aggregate total quantity sold per product from detail lines
+  const productosTotales = {};
+  for (const v of ventas) {
+    for (const d of v.detalles) {
+      if (!productosTotales[d.producto]) {
+        productosTotales[d.producto] = 0;
+      }
+      productosTotales[d.producto] += Number(d.cantidad_vendida);
+    }
+  }
+
+  // Sort by quantity descending and take top 10
+  const sortedProductos = Object.entries(productosTotales)
+    .sort(function (a, b) { return b[1] - a[1]; })
+    .slice(0, 10);
+
+  const nombresProductos = sortedProductos.map(function (e) { return e[0]; });
+  const cantidadesProductos = sortedProductos.map(function (e) { return e[1]; });
+
+  const ctxProd = document.getElementById('chart-productos');
+  if (ctxProd) {
+    chartProductos = new Chart(ctxProd, {
+      type: 'bar',
+      data: {
+        labels: nombresProductos,
+        datasets: [{
+          label: 'Unidades vendidas',
+          data: cantidadesProductos,
+          backgroundColor: [
+            '#4361ee', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6',
+            '#06b6d4', '#ec4899', '#14b8a6', '#f97316', '#6366f1'
+          ],
+          borderRadius: 6
+        }]
+      },
+      options: {
+        responsive: true,
+        plugins: {
+          legend: { display: false }
+        },
+        scales: {
+          y: {
+            beginAtZero: true,
+            ticks: { stepSize: 1 }
+          }
+        }
+      }
+    });
   }
 }
 
