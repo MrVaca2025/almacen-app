@@ -112,6 +112,23 @@ router.post('/', async (req, res) => {
       total_venta += Number(detalle.cantidad_vendida) * Number(detalle.precio_unitario);
     }
 
+    // Pre-validate stock availability before starting transaction
+    for (const detalle of detalles) {
+      const [stockRows] = await pool.query(
+        'SELECT nombre, stock_actual FROM producto WHERE id_producto = ?',
+        [detalle.id_producto]
+      );
+      if (stockRows.length === 0) {
+        return res.status(400).json({ error: 'Producto ID ' + detalle.id_producto + ' no encontrado' });
+      }
+      const prod = stockRows[0];
+      if (Number(detalle.cantidad_vendida) > prod.stock_actual) {
+        return res.status(400).json({
+          error: 'Stock insuficiente para ' + prod.nombre + '. Disponible: ' + prod.stock_actual + ', solicitado: ' + detalle.cantidad_vendida
+        });
+      }
+    }
+
     conn = await pool.getConnection();
     await conn.beginTransaction();
 

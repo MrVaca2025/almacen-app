@@ -9,6 +9,8 @@ const productosRouter = require('./routes/productos');
 const ingresosRouter = require('./routes/ingresos');
 const ventasRouter = require('./routes/ventas');
 const dashboardRouter = require('./routes/dashboard');
+const authRouter = require('./routes/auth');
+const kardexRouter = require('./routes/kardex');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -23,10 +25,12 @@ app.get('/api/health', (_req, res) => {
 });
 
 // API routes
+app.use('/api', authRouter);
 app.use('/api/productos', productosRouter);
 app.use('/api/ingresos', ingresosRouter);
 app.use('/api/ventas', ventasRouter);
 app.use('/api/dashboard', dashboardRouter);
+app.use('/api/kardex', kardexRouter);
 
 // 404 handler for undefined routes
 app.use((_req, res) => {

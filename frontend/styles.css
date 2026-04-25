@@ -85,6 +85,167 @@ body {
 }
 
 /* =============================================
+   LOGIN SCREEN
+   ============================================= */
+.login-screen {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(145deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+}
+
+.login-card {
+  background: rgba(255, 255, 255, 0.97);
+  border-radius: 16px;
+  padding: 40px 36px;
+  max-width: 380px;
+  width: 90%;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  animation: fadeIn 0.5s ease-out;
+  text-align: center;
+}
+
+.login-card h1 {
+  font-size: 28px;
+  color: #0f172a;
+  margin-bottom: 4px;
+}
+
+.login-subtitle {
+  font-size: 13px;
+  color: #64748b;
+  margin-bottom: 24px;
+}
+
+.login-card label {
+  display: block;
+  text-align: left;
+  margin-top: 14px;
+  margin-bottom: 5px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.login-card input {
+  width: 100%;
+  padding: 11px 14px;
+  border: 1.5px solid #cbd5e1;
+  border-radius: 8px;
+  font-size: 14px;
+  color: #1a1a2e;
+  background-color: #f8fafc;
+  transition: border-color 0.2s ease;
+  box-sizing: border-box;
+}
+
+.login-card input:focus {
+  border-color: #4361ee;
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.15);
+  background-color: #fff;
+}
+
+.login-card button {
+  width: 100%;
+  margin-top: 20px;
+  padding: 12px;
+  font-size: 15px;
+  font-weight: 600;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  background: linear-gradient(135deg, #4361ee, #3b52cc);
+  color: white;
+  box-shadow: 0 4px 12px rgba(67, 97, 238, 0.3);
+  transition: all 0.2s ease;
+}
+
+.login-card button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(67, 97, 238, 0.4);
+}
+
+.login-card button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.login-hint {
+  margin-top: 16px;
+  font-size: 11px;
+  color: #94a3b8;
+}
+
+/* =============================================
+   SESSION INFO
+   ============================================= */
+.session-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.session-user {
+  font-size: 14px;
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.session-badge {
+  font-size: 11px;
+  padding: 3px 10px;
+  border-radius: 12px;
+  background: #e0e7ff;
+  color: #3730a3;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.btn-logout {
+  font-size: 12px;
+  padding: 5px 14px;
+  border: 1.5px solid #ef4444;
+  border-radius: 8px;
+  background: transparent;
+  color: #ef4444;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.2s ease;
+}
+
+.btn-logout:hover {
+  background: #ef4444;
+  color: white;
+}
+
+/* =============================================
+   SKELETON LOADING
+   ============================================= */
+.skeleton-container {
+  text-align: center;
+  padding: 40px 20px;
+  color: #94a3b8;
+}
+
+.skeleton-text {
+  margin-top: 12px;
+  font-size: 14px;
+  color: #64748b;
+}
+
+/* =============================================
    LOADING SPINNER
    ============================================= */
 .loading-spinner {
@@ -995,6 +1156,48 @@ button:disabled {
 }
 
 /* =============================================
+   HEADER TOP
+   ============================================= */
+.header-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+/* =============================================
+   KARDEX
+   ============================================= */
+.modal-kardex {
+  max-width: 650px;
+}
+
+.kardex-table {
+  width: 100%;
+}
+
+.kardex-row-ingreso td:nth-child(2),
+.kardex-row-ingreso td:nth-child(3) {
+  color: #065f46;
+}
+
+.kardex-row-venta td:nth-child(2),
+.kardex-row-venta td:nth-child(3) {
+  color: #991b1b;
+}
+
+.btn-kardex {
+  background: #e0e7ff;
+  color: #3730a3;
+  border: none;
+}
+
+.btn-kardex:hover {
+  background: #c7d2fe;
+}
+
+/* =============================================
    RESPONSIVE
    ============================================= */
 @media (max-width: 768px) {
@@ -1064,6 +1267,15 @@ button:disabled {
   .form-row {
     flex-direction: column;
     gap: 0;
+  }
+
+  .header-top {
+    flex-direction: column;
+    text-align: center;
+  }
+
+  .session-info {
+    justify-content: center;
   }
 }
 

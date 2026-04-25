@@ -736,7 +736,92 @@ Después de un ingreso, si un producto sale de estado "bajo stock" a "OK", apare
 4. **Ganancia estimada**: "Ver dashboard" → verificar KPI "Ganancia estimada" y gráfico de rentabilidad
 5. **Alerta recovery**: Registrar ingreso de producto bajo stock → verificar toast verde
 
+### 11.21 Login / Autenticación (Phase 4)
+
+El sistema requiere login antes de usar cualquier funcionalidad.
+
+**Usuarios predefinidos:**
+| Usuario | Contraseña | Rol |
+|---------|-----------|-----|
+| admin | 1234 | Administrador |
+| vendedor | 1234 | Vendedor |
+
+**Flujo:**
+1. Se muestra pantalla de login al abrir la app
+2. El usuario ingresa credenciales → `POST /api/login`
+3. Sesión se guarda en `localStorage` como `almacen_session`
+4. Se muestra nombre de usuario y rol en el header
+5. "Cerrar sesión" limpia la sesión y vuelve al login
+6. Al recargar página, la sesión se restaura automáticamente
+
+### 11.22 Kardex (Movimientos de inventario) (Phase 4)
+
+Cada producto tiene un botón "📋 Kardex" que muestra el historial completo de movimientos:
+- **Ingresos** (verde): +cantidad, precio de compra
+- **Ventas** (rojo): -cantidad, precio de venta
+- Stock resultante acumulado
+- Exportable a PDF
+
+**Endpoint:** `GET /api/kardex/:productoId`
+
+### 11.23 Validación estricta de stock (Phase 4)
+
+La validación de stock se aplica en dos niveles:
+1. **Frontend**: Verifica stock disponible antes de agregar al carrito
+2. **Backend**: Pre-valida stock antes de iniciar la transacción → `"Stock insuficiente para {producto}. Disponible: X, solicitado: Y"`
+3. **Trigger DB**: Validación final a nivel de base de datos (ya existente)
+
+### 11.24 Dashboard avanzado (Phase 4)
+
+Nuevos KPIs:
+- **Producto más rotado**: Producto con más transacciones de venta
+- **Días de stock estimados**: `stock_actual ÷ ventas_diarias_promedio`
+- Tooltip sobre margen estimado
+
+### 11.25 Export PDF (Phase 4)
+
+Se puede exportar a PDF:
+- Historial de ventas
+- Historial de ingresos
+- Comprobante de venta (recibo)
+- Kardex por producto
+
+Usa `window.open()` + `window.print()` en ventana separada con estilos limpios.
+
+### 11.26 Modularización del código (Phase 4)
+
+`frontend/app.js` se dividió en módulos independientes:
+
+| Archivo | Responsabilidad |
+|---------|----------------|
+| `js/config.js` | Configuración global, API base, formatCLP, localStorage keys |
+| `js/ui.js` | Toasts, mensajes, skeletons, badges, modals, PDF helper |
+| `js/auth.js` | Login, logout, session management |
+| `js/productos.js` | CRUD de productos, Kardex, bajo stock, alert banner |
+| `js/ventas.js` | Carrito de ventas, registro, historial, CSV/PDF export |
+| `js/ingresos.js` | Carrito de ingresos, registro, historial, PDF export |
+| `js/dashboard.js` | Dashboard, KPIs, Chart.js charts, margin analysis |
+| `app.js` | Entry point, localStorage persistence, initialization |
+
+### 11.27 Endpoints agregados (Phase 4)
+
+| Método | Ruta | Descripción |
+|--------|------|-------------|
+| POST | `/api/login` | Autenticación con usuarios hardcoded |
+| GET | `/api/kardex/:productoId` | Movimientos de inventario por producto |
+
+### 11.28 Cómo probar Phase 4
+
+1. **Login**: Abrir app → login con `admin` / `1234` → verificar header muestra usuario
+2. **Logout**: Click "Cerrar sesión" → vuelve a pantalla de login
+3. **Session restore**: Login → recargar página → sesión se mantiene
+4. **Kardex**: Cargar productos → click "📋 Kardex" en un producto → ver movimientos
+5. **Stock validation**: Intentar vender más de lo disponible → error "Stock insuficiente"
+6. **Dashboard avanzado**: Ver dashboard → verificar "Producto más rotado" y "Días de stock"
+7. **PDF export**: Historial ventas → "Exportar PDF" → se abre ventana para imprimir
+
 ## 12. Próximos pasos
 
-1. Implementar login básico para operadores.
-2. Probar flujo completo con múltiples usuarios.
+1. Implementar roles con permisos diferenciados.
+2. Agregar gestión de proveedores.
+3. Probar flujo completo con múltiples usuarios.
