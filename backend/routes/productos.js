@@ -70,4 +70,74 @@ router.post('/', async (req, res) => {
   }
 });
 
+// PUT /api/productos/:id — Update product fields (nombre, precio_venta, stock_minimo, id_categoria)
+router.put('/:id', async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    if (!id || isNaN(id)) {
+      return res.status(400).json({ error: 'ID de producto inválido' });
+    }
+
+    const { nombre, precio_venta, stock_minimo, id_categoria } = req.body;
+
+    if (!nombre || nombre.trim() === '') {
+      return res.status(400).json({ error: 'El nombre es obligatorio' });
+    }
+    if (precio_venta == null || isNaN(Number(precio_venta)) || Number(precio_venta) < 0) {
+      return res.status(400).json({ error: 'El precio de venta debe ser >= 0' });
+    }
+    if (stock_minimo == null || isNaN(Number(stock_minimo)) || Number(stock_minimo) < 0) {
+      return res.status(400).json({ error: 'El stock mínimo debe ser >= 0' });
+    }
+    if (!id_categoria || isNaN(Number(id_categoria))) {
+      return res.status(400).json({ error: 'La categoría es obligatoria' });
+    }
+
+    const [result] = await pool.query(
+      `UPDATE producto SET nombre = ?, precio_venta = ?, stock_minimo = ?, id_categoria = ? WHERE id_producto = ?`,
+      [nombre.trim(), Number(precio_venta), Number(stock_minimo), Number(id_categoria), id]
+    );
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ error: 'Producto no encontrado' });
+    }
+
+    res.json({ message: 'Producto actualizado', id_producto: id });
+  } catch (err) {
+    res.status(500).json({ error: err.message || err.code || 'Error interno del servidor' });
+  }
+});
+
+// PATCH /api/productos/:id/toggle — Toggle active/inactive
+router.patch('/:id/toggle', async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    if (!id || isNaN(id)) {
+      return res.status(400).json({ error: 'ID de producto inválido' });
+    }
+
+    const [rows] = await pool.query('SELECT activo FROM producto WHERE id_producto = ?', [id]);
+    if (rows.length === 0) {
+      return res.status(404).json({ error: 'Producto no encontrado' });
+    }
+
+    const nuevoEstado = !rows[0].activo;
+    await pool.query('UPDATE producto SET activo = ? WHERE id_producto = ?', [nuevoEstado, id]);
+
+    res.json({ message: nuevoEstado ? 'Producto activado' : 'Producto desactivado', activo: nuevoEstado, id_producto: id });
+  } catch (err) {
+    res.status(500).json({ error: err.message || err.code || 'Error interno del servidor' });
+  }
+});
+
+// GET /api/categorias — List all categories (for edit form dropdown)
+router.get('/categorias', async (_req, res) => {
+  try {
+    const [rows] = await pool.query('SELECT id_categoria, nombre FROM categoria ORDER BY nombre');
+    res.json(rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message || err.code || 'Error interno del servidor' });
+  }
+});
+
 module.exports = router;

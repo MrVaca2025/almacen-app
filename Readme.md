@@ -662,8 +662,37 @@ En la parte superior de la página hay un campo de texto **"Operador"** para ing
 - Se muestra en el comprobante de venta.
 - No requiere login ni contraseña.
 
+### 11.11 Gestión de productos (Phase 2)
+
+Desde la tabla de productos se puede:
+- **Editar**: click en "✏️ Editar" → abre modal con nombre, precio, stock mínimo y categoría. Los cambios se guardan vía `PUT /api/productos/:id`.
+- **Activar/Desactivar**: click en "Activar"/"Desactivar" → cambia el estado del producto vía `PATCH /api/productos/:id/toggle`. Productos inactivos no aparecen en los dropdowns de venta/ingreso.
+
+Validaciones: precio >= 0, stock mínimo >= 0, nombre obligatorio, categoría obligatoria.
+
+### 11.12 Dashboard mejorado (Phase 2)
+
+El dashboard incluye:
+- **6 KPI cards**: productos activos, ventas, ingresos, monto total, bajo stock, producto más rentable
+- **Gráfico de línea**: ventas por día con curva suavizada y tooltips en CLP
+- **Gráfico de barras**: ingresos por producto (top 10 por revenue)
+- **Gráfico de torta**: ventas por categoría
+
+### 11.13 Smart alerts (Phase 2)
+
+- **Banner superior**: muestra productos críticos y bajo stock con click para ver detalles
+- **Toast notifications**: después de una venta, si algún producto queda en stock bajo o crítico, aparece una notificación temporal en la esquina superior derecha
+
+### 11.14 Endpoints agregados (Phase 2)
+
+| Método | Ruta | Descripción |
+|--------|------|-------------|
+| PUT | `/api/productos/:id` | Editar nombre, precio, stock mínimo, categoría |
+| PATCH | `/api/productos/:id/toggle` | Activar/desactivar producto |
+| GET | `/api/productos/categorias` | Listar categorías (para edit modal) |
+
 ## 12. Próximos pasos
 
-1. Agregar formulario para crear productos nuevos desde el frontend.
-2. Implementar login básico para operadores.
+1. Implementar login básico para operadores.
+2. Agregar formulario para crear productos nuevos.
 3. Probar flujo completo con múltiples usuarios.
