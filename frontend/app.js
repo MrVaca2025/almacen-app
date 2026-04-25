@@ -5,6 +5,12 @@
 const API_BASE = 'http://localhost:3000';
 
 // =============================================
+// SALE CART — stores items before submitting
+// Each item: { id_producto, nombre, cantidad_vendida, precio_unitario }
+// =============================================
+let carrito = [];
+
+// =============================================
 // HELPER FUNCTIONS
 // =============================================
 
@@ -25,6 +31,55 @@ function clearMessage(elementId) {
 // setResultado — Write HTML content into the results area
 function setResultado(html) {
   document.getElementById('resultado').innerHTML = html;
+}
+
+// =============================================
+// PRODUCT DROPDOWNS
+// Fetches products from the API and populates
+// all <select> elements that need product options.
+// Called on page load and after ingreso/venta.
+// =============================================
+
+async function cargarDropdownProductos() {
+  try {
+    const res = await fetch(API_BASE + '/api/productos');
+    const data = await res.json();
+
+    if (!res.ok) return; // silently fail — dropdowns show default text
+
+    // Build option elements: "ID — Nombre (Stock: X, $Precio)"
+    const options = data.map(function (p) {
+      return '<option value="' + p.id_producto + '">'
+        + p.id_producto + ' — ' + p.nombre
+        + ' (Stock: ' + p.stock_actual + ', $' + p.precio_venta + ')'
+        + '</option>';
+    });
+
+    const optionsHtml = '<option value="">-- Seleccionar producto --</option>' + options.join('');
+
+    // Populate both dropdowns (venta and ingreso)
+    document.getElementById('venta-producto').innerHTML = optionsHtml;
+    document.getElementById('ingreso-producto').innerHTML = optionsHtml;
+  } catch (err) {
+    // If the backend is not running, show fallback text
+    const fallback = '<option value="">-- Error al cargar productos --</option>';
+    document.getElementById('venta-producto').innerHTML = fallback;
+    document.getElementById('ingreso-producto').innerHTML = fallback;
+  }
+}
+
+// Auto-fill price when a product is selected in the venta dropdown
+function onVentaProductoChange() {
+  // We store product data from the last dropdown load to auto-fill price
+  const select = document.getElementById('venta-producto');
+  const option = select.options[select.selectedIndex];
+  if (option && option.value) {
+    // Extract price from the option text: "... $PRICE)"
+    const match = option.textContent.match(/\$(\d+(?:\.\d+)?)\)/);
+    if (match) {
+      document.getElementById('venta-precio').value = match[1];
+    }
+  }
 }
 
 // =============================================
@@ -112,32 +167,110 @@ async function verBajoStock() {
 }
 
 // =============================================
-// C) CREATE SALE
-// Reads form inputs and sends POST /api/ventas
-// with the sale details.
+// C) SALE CART
+// Users add products to the cart one at a time,
+// then submit all items as a single sale.
 // =============================================
 
-async function registrarVenta(event) {
-  event.preventDefault();
+// agregarAlCarrito — Validate inputs and add an item to the cart array
+function agregarAlCarrito() {
   clearMessage('msg-venta');
 
-  // Read form values
-  const id_medio_pago = Number(document.getElementById('venta-medio-pago').value);
-  const id_producto = Number(document.getElementById('venta-producto').value);
+  const selectEl = document.getElementById('venta-producto');
+  const id_producto = Number(selectEl.value);
+  const nombre = selectEl.options[selectEl.selectedIndex].textContent;
   const cantidad_vendida = Number(document.getElementById('venta-cantidad').value);
   const precio_unitario = Number(document.getElementById('venta-precio').value);
 
-  // Build request body matching the API format
-  const body = {
-    id_medio_pago: id_medio_pago,
-    detalles: [
-      {
-        id_producto: id_producto,
-        cantidad_vendida: cantidad_vendida,
-        precio_unitario: precio_unitario
-      }
-    ]
-  };
+  // Validate all fields
+  if (!id_producto) {
+    showMessage('msg-venta', 'Seleccione un producto', 'error');
+    return;
+  }
+  if (!cantidad_vendida || cantidad_vendida <= 0) {
+    showMessage('msg-venta', 'Ingrese una cantidad válida', 'error');
+    return;
+  }
+  if (!precio_unitario || precio_unitario <= 0) {
+    showMessage('msg-venta', 'Ingrese un precio válido', 'error');
+    return;
+  }
+
+  // Add item to cart array
+  carrito.push({ id_producto, nombre, cantidad_vendida, precio_unitario });
+
+  // Clear the input fields (keep medio de pago selected)
+  document.getElementById('venta-producto').value = '';
+  document.getElementById('venta-cantidad').value = '';
+  document.getElementById('venta-precio').value = '';
+
+  renderCarrito();
+  showMessage('msg-venta', 'Producto agregado al carrito', 'success');
+}
+
+// renderCarrito — Rebuild the cart table from the carrito array
+function renderCarrito() {
+  const container = document.getElementById('carrito-container');
+  const tbody = document.getElementById('carrito-body');
+
+  if (carrito.length === 0) {
+    container.style.display = 'none';
+    return;
+  }
+
+  container.style.display = 'block';
+  let total = 0;
+  let html = '';
+
+  for (let i = 0; i < carrito.length; i++) {
+    const item = carrito[i];
+    const subtotal = item.cantidad_vendida * item.precio_unitario;
+    total += subtotal;
+
+    // Each row shows product name, quantity, unit price, subtotal, and a remove button
+    html += '<tr>';
+    html += '<td>' + item.nombre.split(' — ')[1].split(' (')[0] + '</td>'; // extract clean name
+    html += '<td>' + item.cantidad_vendida + '</td>';
+    html += '<td>$' + item.precio_unitario + '</td>';
+    html += '<td>$' + subtotal + '</td>';
+    html += '<td><button class="btn-remove" onclick="quitarDelCarrito(' + i + ')">X</button></td>';
+    html += '</tr>';
+  }
+
+  tbody.innerHTML = html;
+  document.getElementById('carrito-total').innerHTML = '<strong>$' + total + '</strong>';
+}
+
+// quitarDelCarrito — Remove an item from the cart by index
+function quitarDelCarrito(index) {
+  carrito.splice(index, 1);
+  renderCarrito();
+}
+
+// registrarVenta — Send all cart items to POST /api/ventas
+async function registrarVenta() {
+  clearMessage('msg-venta');
+
+  const id_medio_pago = Number(document.getElementById('venta-medio-pago').value);
+  if (!id_medio_pago) {
+    showMessage('msg-venta', 'Seleccione un medio de pago', 'error');
+    return;
+  }
+  if (carrito.length === 0) {
+    showMessage('msg-venta', 'El carrito está vacío. Agregue productos primero.', 'error');
+    return;
+  }
+
+  // Build detalles array from cart items
+  const detalles = carrito.map(function (item) {
+    return {
+      id_producto: item.id_producto,
+      cantidad_vendida: item.cantidad_vendida,
+      precio_unitario: item.precio_unitario
+    };
+  });
+
+  const body = { id_medio_pago: id_medio_pago, detalles: detalles };
 
   try {
     const res = await fetch(API_BASE + '/api/ventas', {
@@ -149,9 +282,14 @@ async function registrarVenta(event) {
 
     if (res.ok) {
       showMessage('msg-venta', 'Venta registrada. ID: ' + data.id_venta + ' | Total: $' + data.total_venta, 'success');
-      document.getElementById('form-venta').reset();
+      // Clear cart and refresh product dropdowns to show updated stock
+      carrito = [];
+      renderCarrito();
+      document.getElementById('venta-medio-pago').value = '';
+      cargarDropdownProductos();
+      cargarProductos(); // refresh product table if visible
     } else {
-      // Show API error (e.g. stock insuficiente, campos faltantes)
+      // Show the API error message (e.g. "Stock insuficiente: ...")
       showMessage('msg-venta', 'Error: ' + data.error, 'error');
     }
   } catch (err) {
@@ -171,11 +309,16 @@ async function registrarIngreso(event) {
   event.preventDefault();
   clearMessage('msg-ingreso');
 
-  // Read form values
+  // Read form values from inputs and dropdown
   const id_interlocutor = Number(document.getElementById('ingreso-interlocutor').value);
   const id_producto = Number(document.getElementById('ingreso-producto').value);
   const cantidad_ingresada = Number(document.getElementById('ingreso-cantidad').value);
   const precio_compra = Number(document.getElementById('ingreso-precio').value);
+
+  if (!id_producto) {
+    showMessage('msg-ingreso', 'Seleccione un producto', 'error');
+    return;
+  }
 
   // Build request body matching the API format
   const body = {
@@ -201,6 +344,9 @@ async function registrarIngreso(event) {
     if (res.ok) {
       showMessage('msg-ingreso', 'Ingreso registrado. ID: ' + data.id_ingreso, 'success');
       document.getElementById('form-ingreso').reset();
+      // Refresh product dropdowns and table to show updated stock
+      cargarDropdownProductos();
+      cargarProductos();
     } else {
       showMessage('msg-ingreso', 'Error: ' + data.error, 'error');
     }
@@ -287,3 +433,14 @@ function buildKpiCard(value, label) {
     + '<div class="kpi-label">' + label + '</div>'
     + '</div>';
 }
+
+// =============================================
+// INITIALIZATION
+// Load product dropdowns when the page opens.
+// Also attach the change event for auto-fill.
+// =============================================
+
+document.addEventListener('DOMContentLoaded', function () {
+  cargarDropdownProductos();
+  document.getElementById('venta-producto').addEventListener('change', onVentaProductoChange);
+});

@@ -514,60 +514,79 @@ start frontend\index.html
 | Registrar venta        | Registra una venta con un producto          | POST /api/ventas            |
 | Registrar ingreso      | Registra un ingreso de mercadería           | POST /api/ingresos          |
 
-### 11.5 Flujo de prueba recomendado
+### 11.5 Características UX
+
+**Dropdowns de productos:**
+- Los formularios de venta e ingreso usan `<select>` en vez de inputs manuales de ID.
+- Al abrir la página, se cargan automáticamente los productos desde `GET /api/productos`.
+- Cada opción muestra: `ID — Nombre (Stock: X, $Precio)`.
+- Al seleccionar un producto en ventas, el precio se auto-completa.
+
+**Carrito de venta:**
+- Permite agregar múltiples productos antes de registrar la venta.
+- Botón **"Agregar al carrito"** valida y agrega el producto a una tabla.
+- La tabla del carrito muestra: producto, cantidad, precio unitario, subtotal.
+- Botón **"X"** rojo para eliminar un item del carrito.
+- Botón **"Registrar venta"** envía todos los items del carrito como una sola venta.
+- El carrito se limpia después de una venta exitosa.
+
+**Mensajes visuales:**
+- **Verde**: operación exitosa (venta registrada, ingreso registrado, producto agregado al carrito).
+- **Rojo**: error de validación, stock insuficiente, o error de conexión.
+- Después de una venta o ingreso exitoso, los dropdowns y la tabla de productos se actualizan automáticamente.
+
+### 11.6 Flujo de prueba recomendado
 
 Seguir estos pasos en orden para probar el sistema completo:
 
 **Paso 1** — Abrir `frontend/index.html` en el navegador.
+- Los dropdowns de productos se cargan automáticamente.
 
 **Paso 2** — Hacer clic en **"Cargar productos"**.
 - Deberías ver los 3 productos iniciales (Coca Cola, Pan hallulla, Leche) con stock = 0.
 
 **Paso 3** — Registrar un ingreso de mercadería:
-- Proveedor (ID): `2` (Distribuidora Central)
-- Producto (ID): `1` (Coca Cola)
+- Proveedor (ID): `2`
+- Seleccionar "Coca Cola" del dropdown de producto.
 - Cantidad: `48`
 - Precio de compra: `500`
 - Clic en **"Registrar ingreso"**
-- Debería aparecer: "Ingreso registrado. ID: 1"
+- Debería aparecer mensaje verde: "Ingreso registrado. ID: 1"
+- La tabla de productos se actualiza automáticamente (stock = 48).
 
-**Paso 4** — Hacer clic en **"Cargar productos"** de nuevo.
-- Coca Cola debería tener stock_actual = 48 (aumentó por el trigger).
-
-**Paso 5** — Registrar una venta:
-- Medio de pago (ID): `1` (Efectivo)
-- Producto (ID): `1`
+**Paso 4** — Registrar una venta con carrito:
+- Medio de pago: seleccionar "Efectivo"
+- Seleccionar "Coca Cola" del dropdown (precio se auto-completa).
 - Cantidad: `5`
-- Precio unitario: `800`
+- Clic en **"Agregar al carrito"** → aparece mensaje verde y tabla del carrito.
+- Agregar otro producto si se desea (ej: Pan hallulla).
 - Clic en **"Registrar venta"**
-- Debería aparecer: "Venta registrada. ID: 1 | Total: $4000"
+- Debería aparecer mensaje verde: "Venta registrada. ID: 1 | Total: $4000"
+- El carrito se limpia y la tabla de productos se actualiza.
 
-**Paso 6** — Hacer clic en **"Cargar productos"**.
+**Paso 5** — Hacer clic en **"Cargar productos"**.
 - Coca Cola debería tener stock_actual = 43 (bajó por el trigger).
 
-**Paso 7** — Intentar vender más del stock disponible:
-- Producto: `1`, Cantidad: `9999`, Precio: `800`
-- Debería aparecer un error rojo: "Stock insuficiente"
+**Paso 6** — Intentar vender más del stock disponible:
+- Agregar al carrito: Coca Cola, Cantidad: `9999`, Precio: `800`
+- Clic en **"Registrar venta"**
+- Debería aparecer mensaje rojo: "Error: Stock insuficiente: ..."
 
-**Paso 8** — Hacer clic en **"Ver bajo stock"**.
-- Muestra los productos que necesitan reposición.
+**Paso 7** — Hacer clic en **"Ver bajo stock"** y **"Ver dashboard"**.
+- Verificar que los datos reflejan las operaciones realizadas.
 
-**Paso 9** — Hacer clic en **"Ver dashboard"**.
-- Muestra KPIs: productos activos, ventas, ingresos, monto total, etc.
-
-### 11.6 Datos de referencia para pruebas
+### 11.7 Datos de referencia para pruebas
 
 | Dato | Valores disponibles |
 |------|-------------------|
-| Medios de pago | 1 = Efectivo, 2 = Tarjeta, 3 = Transferencia |
+| Medios de pago | Efectivo, Tarjeta, Transferencia (seleccionar del dropdown) |
 | Proveedores | 2 = Distribuidora Central |
 | Clientes | 1 = Juan Perez |
-| Productos | 1 = Coca Cola, 2 = Pan hallulla, 3 = Leche 1L |
+| Productos | Se cargan automáticamente en los dropdowns |
 | Categorías | 1 = Bebidas, 2 = Snacks, 3 = Alimentos, 4 = Lácteos, ... |
 
 ## 12. Próximos pasos
 
-1. Agregar edición de productos desde el frontend.
-2. Agregar formulario para crear productos nuevos.
-3. Mejorar diseño visual del frontend.
-4. Probar flujo completo con múltiples usuarios.
+1. Agregar formulario para crear productos nuevos desde el frontend.
+2. Mejorar diseño visual del frontend.
+3. Probar flujo completo con múltiples usuarios.

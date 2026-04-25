@@ -29,6 +29,12 @@ h2 {
   color: #34495e;
 }
 
+h3 {
+  margin-bottom: 8px;
+  color: #34495e;
+  font-size: 15px;
+}
+
 /* Navigation buttons */
 .nav-buttons {
   display: flex;
@@ -63,25 +69,24 @@ h2 {
   overflow-x: auto;
 }
 
-/* Tables */
-.resultado table {
+/* Tables (shared between results area and cart) */
+table {
   width: 100%;
   border-collapse: collapse;
 }
 
-.resultado th,
-.resultado td {
+th, td {
   padding: 8px 12px;
   border: 1px solid #ddd;
   text-align: left;
 }
 
-.resultado th {
+th {
   background-color: #3498db;
   color: white;
 }
 
-.resultado tr:nth-child(even) {
+tr:nth-child(even) {
   background-color: #f9f9f9;
 }
 
@@ -109,14 +114,18 @@ h2 {
   font-weight: bold;
 }
 
-.form-card input {
+/* Shared styles for inputs and selects */
+.form-card input,
+.form-card select {
   width: 100%;
   padding: 8px;
   border: 1px solid #ccc;
   border-radius: 4px;
   font-size: 14px;
+  background-color: white;
 }
 
+/* Primary button (submit forms) */
 .form-card button {
   margin-top: 14px;
   width: 100%;
@@ -131,6 +140,43 @@ h2 {
 
 .form-card button:hover {
   background-color: #219a52;
+}
+
+/* Secondary button (add to cart) */
+.btn-secondary {
+  background-color: #3498db !important;
+}
+
+.btn-secondary:hover {
+  background-color: #2980b9 !important;
+}
+
+/* Remove button in cart rows */
+.btn-remove {
+  width: auto !important;
+  margin: 0 !important;
+  padding: 4px 10px !important;
+  font-size: 12px !important;
+  background-color: #e74c3c !important;
+  border-radius: 4px !important;
+}
+
+.btn-remove:hover {
+  background-color: #c0392b !important;
+}
+
+/* Cart table within form card */
+#carrito-tabla {
+  margin-bottom: 12px;
+}
+
+#carrito-tabla th {
+  background-color: #2c3e50;
+  font-size: 13px;
+}
+
+#carrito-tabla td {
+  font-size: 13px;
 }
 
 /* Messages */

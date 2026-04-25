@@ -30,42 +30,72 @@
     <!-- ===================== -->
     <div class="forms-container">
 
-      <!-- FORM: Registrar Venta -->
+      <!-- ========================= -->
+      <!-- SALE CART (multi-product)  -->
+      <!-- ========================= -->
       <div class="form-card">
         <h2>Registrar Venta</h2>
-        <form id="form-venta" onsubmit="registrarVenta(event)">
-          <label for="venta-medio-pago">Medio de pago (ID)</label>
-          <input type="number" id="venta-medio-pago" placeholder="1=Efectivo, 2=Tarjeta, 3=Transferencia" required>
 
-          <label for="venta-producto">Producto (ID)</label>
-          <input type="number" id="venta-producto" placeholder="ID del producto" required>
+        <!-- Payment method -->
+        <label for="venta-medio-pago">Medio de pago</label>
+        <select id="venta-medio-pago" required>
+          <option value="">-- Seleccionar --</option>
+          <option value="1">1 - Efectivo</option>
+          <option value="2">2 - Tarjeta</option>
+          <option value="3">3 - Transferencia</option>
+        </select>
 
-          <label for="venta-cantidad">Cantidad</label>
-          <input type="number" id="venta-cantidad" placeholder="Cantidad a vender" required>
+        <!-- Add item to cart -->
+        <label for="venta-producto">Producto</label>
+        <select id="venta-producto">
+          <option value="">-- Cargando productos... --</option>
+        </select>
 
-          <label for="venta-precio">Precio unitario</label>
-          <input type="number" id="venta-precio" step="0.01" placeholder="Precio por unidad" required>
+        <label for="venta-cantidad">Cantidad</label>
+        <input type="number" id="venta-cantidad" placeholder="Cantidad a vender" min="1">
 
-          <button type="submit">Registrar venta</button>
-        </form>
+        <label for="venta-precio">Precio unitario</label>
+        <input type="number" id="venta-precio" step="0.01" placeholder="Precio por unidad" min="0">
+
+        <button type="button" class="btn-secondary" onclick="agregarAlCarrito()">Agregar al carrito</button>
+
+        <!-- Cart table -->
+        <div id="carrito-container" style="display:none; margin-top:12px;">
+          <h3>Carrito</h3>
+          <table id="carrito-tabla">
+            <thead>
+              <tr><th>Producto</th><th>Cant.</th><th>P. Unit.</th><th>Subtotal</th><th></th></tr>
+            </thead>
+            <tbody id="carrito-body"></tbody>
+            <tfoot>
+              <tr><td colspan="3"><strong>Total</strong></td><td id="carrito-total"><strong>$0</strong></td><td></td></tr>
+            </tfoot>
+          </table>
+          <button type="button" onclick="registrarVenta()">Registrar venta</button>
+        </div>
+
         <div id="msg-venta" class="msg"></div>
       </div>
 
-      <!-- FORM: Registrar Ingreso -->
+      <!-- ========================= -->
+      <!-- FORM: Registrar Ingreso   -->
+      <!-- ========================= -->
       <div class="form-card">
         <h2>Registrar Ingreso</h2>
         <form id="form-ingreso" onsubmit="registrarIngreso(event)">
           <label for="ingreso-interlocutor">Proveedor (ID)</label>
-          <input type="number" id="ingreso-interlocutor" placeholder="ID del proveedor" required>
+          <input type="number" id="ingreso-interlocutor" placeholder="Ej: 2 (Distribuidora Central)" required>
 
-          <label for="ingreso-producto">Producto (ID)</label>
-          <input type="number" id="ingreso-producto" placeholder="ID del producto" required>
+          <label for="ingreso-producto">Producto</label>
+          <select id="ingreso-producto" required>
+            <option value="">-- Cargando productos... --</option>
+          </select>
 
           <label for="ingreso-cantidad">Cantidad ingresada</label>
-          <input type="number" id="ingreso-cantidad" placeholder="Cantidad a ingresar" required>
+          <input type="number" id="ingreso-cantidad" placeholder="Cantidad a ingresar" min="1" required>
 
           <label for="ingreso-precio">Precio de compra</label>
-          <input type="number" id="ingreso-precio" step="0.01" placeholder="Precio por unidad" required>
+          <input type="number" id="ingreso-precio" step="0.01" placeholder="Precio por unidad" min="0" required>
 
           <button type="submit">Registrar ingreso</button>
         </form>
