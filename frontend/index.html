@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sistema de Gestión de Almacén</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <div class="container">
+    <h1>Sistema de Gestión de Almacén</h1>
+
+    <!-- ===================== -->
+    <!-- NAVIGATION BUTTONS    -->
+    <!-- ===================== -->
+    <nav class="nav-buttons">
+      <button onclick="cargarProductos()">Cargar productos</button>
+      <button onclick="verBajoStock()">Ver bajo stock</button>
+      <button onclick="verDashboard()">Ver dashboard</button>
+    </nav>
+
+    <!-- ===================== -->
+    <!-- RESULTS AREA          -->
+    <!-- ===================== -->
+    <div id="resultado" class="resultado"></div>
+
+    <!-- ===================== -->
+    <!-- FORMS SECTION         -->
+    <!-- ===================== -->
+    <div class="forms-container">
+
+      <!-- FORM: Registrar Venta -->
+      <div class="form-card">
+        <h2>Registrar Venta</h2>
+        <form id="form-venta" onsubmit="registrarVenta(event)">
+          <label for="venta-medio-pago">Medio de pago (ID)</label>
+          <input type="number" id="venta-medio-pago" placeholder="1=Efectivo, 2=Tarjeta, 3=Transferencia" required>
+
+          <label for="venta-producto">Producto (ID)</label>
+          <input type="number" id="venta-producto" placeholder="ID del producto" required>
+
+          <label for="venta-cantidad">Cantidad</label>
+          <input type="number" id="venta-cantidad" placeholder="Cantidad a vender" required>
+
+          <label for="venta-precio">Precio unitario</label>
+          <input type="number" id="venta-precio" step="0.01" placeholder="Precio por unidad" required>
+
+          <button type="submit">Registrar venta</button>
+        </form>
+        <div id="msg-venta" class="msg"></div>
+      </div>
+
+      <!-- FORM: Registrar Ingreso -->
+      <div class="form-card">
+        <h2>Registrar Ingreso</h2>
+        <form id="form-ingreso" onsubmit="registrarIngreso(event)">
+          <label for="ingreso-interlocutor">Proveedor (ID)</label>
+          <input type="number" id="ingreso-interlocutor" placeholder="ID del proveedor" required>
+
+          <label for="ingreso-producto">Producto (ID)</label>
+          <input type="number" id="ingreso-producto" placeholder="ID del producto" required>
+
+          <label for="ingreso-cantidad">Cantidad ingresada</label>
+          <input type="number" id="ingreso-cantidad" placeholder="Cantidad a ingresar" required>
+
+          <label for="ingreso-precio">Precio de compra</label>
+          <input type="number" id="ingreso-precio" step="0.01" placeholder="Precio por unidad" required>
+
+          <button type="submit">Registrar ingreso</button>
+        </form>
+        <div id="msg-ingreso" class="msg"></div>
+      </div>
+
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

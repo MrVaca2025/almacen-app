@@ -1,0 +1,184 @@
+/* styles.css — Basic styles for the almacen-app frontend */
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: Arial, sans-serif;
+  background-color: #f5f5f5;
+  color: #333;
+  padding: 20px;
+}
+
+.container {
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+h1 {
+  text-align: center;
+  margin-bottom: 20px;
+  color: #2c3e50;
+}
+
+h2 {
+  margin-bottom: 12px;
+  color: #34495e;
+}
+
+/* Navigation buttons */
+.nav-buttons {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.nav-buttons button {
+  padding: 10px 20px;
+  font-size: 14px;
+  cursor: pointer;
+  border: 1px solid #3498db;
+  background-color: #3498db;
+  color: white;
+  border-radius: 4px;
+}
+
+.nav-buttons button:hover {
+  background-color: #2980b9;
+}
+
+/* Results area */
+.resultado {
+  background-color: white;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  padding: 16px;
+  margin-bottom: 20px;
+  min-height: 60px;
+  overflow-x: auto;
+}
+
+/* Tables */
+.resultado table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.resultado th,
+.resultado td {
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  text-align: left;
+}
+
+.resultado th {
+  background-color: #3498db;
+  color: white;
+}
+
+.resultado tr:nth-child(even) {
+  background-color: #f9f9f9;
+}
+
+/* Forms */
+.forms-container {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.form-card {
+  flex: 1;
+  min-width: 300px;
+  background-color: white;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  padding: 16px;
+}
+
+.form-card label {
+  display: block;
+  margin-top: 10px;
+  margin-bottom: 4px;
+  font-size: 13px;
+  font-weight: bold;
+}
+
+.form-card input {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.form-card button {
+  margin-top: 14px;
+  width: 100%;
+  padding: 10px;
+  font-size: 14px;
+  cursor: pointer;
+  border: none;
+  border-radius: 4px;
+  background-color: #27ae60;
+  color: white;
+}
+
+.form-card button:hover {
+  background-color: #219a52;
+}
+
+/* Messages */
+.msg {
+  margin-top: 10px;
+  padding: 8px;
+  border-radius: 4px;
+  font-size: 13px;
+  min-height: 20px;
+}
+
+.msg.success {
+  background-color: #d4edda;
+  color: #155724;
+  border: 1px solid #c3e6cb;
+}
+
+.msg.error {
+  background-color: #f8d7da;
+  color: #721c24;
+  border: 1px solid #f5c6cb;
+}
+
+/* Dashboard KPIs */
+.kpi-grid {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+
+.kpi-card {
+  flex: 1;
+  min-width: 140px;
+  background-color: #ecf0f1;
+  border-radius: 4px;
+  padding: 12px;
+  text-align: center;
+}
+
+.kpi-card .kpi-value {
+  font-size: 24px;
+  font-weight: bold;
+  color: #2c3e50;
+}
+
+.kpi-card .kpi-label {
+  font-size: 12px;
+  color: #7f8c8d;
+  margin-top: 4px;
+}

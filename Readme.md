@@ -473,7 +473,101 @@ Para probar el sistema completo, seguir este orden:
 10. GET /api/dashboard            → Ver KPIs del negocio
 ```
 
-## 11. Próximos pasos
+## 11. Frontend (HTML + CSS + JavaScript)
 
-1. Crear frontend simple para operar el sistema.
-2. Probar flujo completo: ingreso, venta y actualización automática de stock.
+### 11.1 Estructura
+
+```
+frontend/
+├── index.html    # Página principal con formularios y botones
+├── styles.css    # Estilos básicos (layout, tablas, botones, KPIs)
+└── app.js        # Lógica con fetch() para comunicarse con la API
+```
+
+### 11.2 Cómo funciona
+
+El frontend se comunica con el backend usando `fetch()` (JavaScript vanilla). Todas las peticiones van a `http://localhost:3000` (el servidor Express).
+
+No usa React, Angular ni Vue — solo HTML, CSS y JavaScript puro.
+
+### 11.3 Cómo abrir el frontend
+
+**Requisito:** El backend debe estar corriendo (`npm run dev` en la carpeta `backend/`).
+
+**Opción 1 — Abrir directamente:**
+
+Hacer doble clic en `frontend/index.html` desde el explorador de archivos de Windows.
+
+**Opción 2 — Desde la terminal:**
+
+```powershell
+start frontend\index.html
+```
+
+### 11.4 Funcionalidades
+
+| Botón / Formulario     | Acción                                      | Endpoint usado              |
+|------------------------|---------------------------------------------|-----------------------------|
+| Cargar productos       | Muestra todos los productos en una tabla    | GET /api/productos          |
+| Ver bajo stock         | Muestra productos bajo stock mínimo         | GET /api/productos/bajo-stock |
+| Ver dashboard          | Muestra KPIs del negocio                    | GET /api/dashboard          |
+| Registrar venta        | Registra una venta con un producto          | POST /api/ventas            |
+| Registrar ingreso      | Registra un ingreso de mercadería           | POST /api/ingresos          |
+
+### 11.5 Flujo de prueba recomendado
+
+Seguir estos pasos en orden para probar el sistema completo:
+
+**Paso 1** — Abrir `frontend/index.html` en el navegador.
+
+**Paso 2** — Hacer clic en **"Cargar productos"**.
+- Deberías ver los 3 productos iniciales (Coca Cola, Pan hallulla, Leche) con stock = 0.
+
+**Paso 3** — Registrar un ingreso de mercadería:
+- Proveedor (ID): `2` (Distribuidora Central)
+- Producto (ID): `1` (Coca Cola)
+- Cantidad: `48`
+- Precio de compra: `500`
+- Clic en **"Registrar ingreso"**
+- Debería aparecer: "Ingreso registrado. ID: 1"
+
+**Paso 4** — Hacer clic en **"Cargar productos"** de nuevo.
+- Coca Cola debería tener stock_actual = 48 (aumentó por el trigger).
+
+**Paso 5** — Registrar una venta:
+- Medio de pago (ID): `1` (Efectivo)
+- Producto (ID): `1`
+- Cantidad: `5`
+- Precio unitario: `800`
+- Clic en **"Registrar venta"**
+- Debería aparecer: "Venta registrada. ID: 1 | Total: $4000"
+
+**Paso 6** — Hacer clic en **"Cargar productos"**.
+- Coca Cola debería tener stock_actual = 43 (bajó por el trigger).
+
+**Paso 7** — Intentar vender más del stock disponible:
+- Producto: `1`, Cantidad: `9999`, Precio: `800`
+- Debería aparecer un error rojo: "Stock insuficiente"
+
+**Paso 8** — Hacer clic en **"Ver bajo stock"**.
+- Muestra los productos que necesitan reposición.
+
+**Paso 9** — Hacer clic en **"Ver dashboard"**.
+- Muestra KPIs: productos activos, ventas, ingresos, monto total, etc.
+
+### 11.6 Datos de referencia para pruebas
+
+| Dato | Valores disponibles |
+|------|-------------------|
+| Medios de pago | 1 = Efectivo, 2 = Tarjeta, 3 = Transferencia |
+| Proveedores | 2 = Distribuidora Central |
+| Clientes | 1 = Juan Perez |
+| Productos | 1 = Coca Cola, 2 = Pan hallulla, 3 = Leche 1L |
+| Categorías | 1 = Bebidas, 2 = Snacks, 3 = Alimentos, 4 = Lácteos, ... |
+
+## 12. Próximos pasos
+
+1. Agregar edición de productos desde el frontend.
+2. Agregar formulario para crear productos nuevos.
+3. Mejorar diseño visual del frontend.
+4. Probar flujo completo con múltiples usuarios.
