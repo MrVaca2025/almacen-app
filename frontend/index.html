@@ -35,11 +35,12 @@
       <button onclick="cargarProductos()">📋 Cargar productos</button>
       <button onclick="verBajoStock()">⚠️ Ver bajo stock</button>
       <button onclick="verDashboard()">📊 Ver dashboard</button>
-      <button onclick="verHistorialVentas()">🕐 Ver historial de ventas</button>
+      <button onclick="verHistorialVentas()">🕐 Historial ventas</button>
+      <button onclick="verHistorialIngresos()">📥 Historial ingresos</button>
     </nav>
 
     <!-- ===================== -->
-    <!-- SALES FILTER          -->
+    <!-- SALES/INGRESO FILTER  -->
     <!-- ===================== -->
     <div id="filtro-ventas" class="filtro-ventas card">
       <label for="filtro-desde">Desde:</label>
@@ -47,7 +48,8 @@
       <label for="filtro-hasta">Hasta:</label>
       <input type="date" id="filtro-hasta">
       <button onclick="filtrarVentas()">Filtrar ventas</button>
-      <button class="btn-csv" onclick="exportarCSV()">📥 Exportar a Excel (CSV)</button>
+      <button onclick="filtrarIngresos()">Filtrar ingresos</button>
+      <button class="btn-csv" onclick="exportarCSV()">📥 Exportar CSV</button>
     </div>
 
     <!-- ===================== -->
@@ -66,7 +68,6 @@
       <div class="form-card card">
         <h2>🛒 Registrar Venta</h2>
 
-        <!-- Payment method -->
         <label for="venta-medio-pago">Medio de pago</label>
         <select id="venta-medio-pago" required>
           <option value="">-- Seleccionar --</option>
@@ -75,7 +76,6 @@
           <option value="3">3 - Transferencia</option>
         </select>
 
-        <!-- Add item to cart -->
         <label for="venta-producto">Producto</label>
         <select id="venta-producto">
           <option value="">-- Cargando productos... --</option>
@@ -89,7 +89,6 @@
 
         <button type="button" id="btn-agregar-carrito" class="btn-secondary" onclick="agregarAlCarrito()" disabled>Agregar al carrito</button>
 
-        <!-- Cart table -->
         <div id="carrito-container" style="display:none; margin-top:16px;">
           <h3>Carrito de venta</h3>
           <table id="carrito-tabla">
@@ -129,7 +128,6 @@
 
         <button type="button" id="btn-agregar-ingreso" class="btn-secondary" onclick="agregarAlIngresoCart()" disabled>Agregar al ingreso</button>
 
-        <!-- Ingreso cart table -->
         <div id="ingreso-cart-container" style="display:none; margin-top:16px;">
           <h3>Carrito de ingreso</h3>
           <table id="ingreso-cart-tabla">
@@ -189,6 +187,66 @@
       <div class="modal-actions">
         <button class="btn-modal btn-modal-print" id="btn-guardar-edit" onclick="guardarEdicionProducto()">Guardar cambios</button>
         <button class="btn-modal btn-modal-close" onclick="cerrarEditModal()">Cancelar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================== -->
+  <!-- CREATE PRODUCT MODAL  -->
+  <!-- ===================== -->
+  <div id="create-modal" class="modal-overlay" style="display:none;" onclick="cerrarCreateModal(event)">
+    <div class="modal-content modal-create" onclick="event.stopPropagation()">
+      <h2>➕ Agregar Producto</h2>
+      <label for="create-nombre">Nombre *</label>
+      <input type="text" id="create-nombre" placeholder="Nombre del producto">
+      <label for="create-descripcion">Descripción</label>
+      <input type="text" id="create-descripcion" placeholder="Descripción (opcional)">
+      <div class="form-row">
+        <div class="form-col">
+          <label for="create-precio">Precio venta *</label>
+          <input type="number" id="create-precio" min="0" step="1" placeholder="0">
+        </div>
+        <div class="form-col">
+          <label for="create-stock-min">Stock mínimo *</label>
+          <input type="number" id="create-stock-min" min="0" step="1" placeholder="0">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-col">
+          <label for="create-unidad-venta">Unidad venta *</label>
+          <input type="text" id="create-unidad-venta" placeholder="Ej: unidad, kg">
+        </div>
+        <div class="form-col">
+          <label for="create-unidad-compra">Unidad compra *</label>
+          <input type="text" id="create-unidad-compra" placeholder="Ej: caja, kg">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-col">
+          <label for="create-factor">Factor conversión *</label>
+          <input type="number" id="create-factor" min="0.01" step="0.01" placeholder="1">
+        </div>
+        <div class="form-col">
+          <label for="create-categoria">Categoría *</label>
+          <select id="create-categoria">
+            <option value="">-- Seleccionar --</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-col">
+          <label for="create-activo">Estado</label>
+          <select id="create-activo">
+            <option value="1">Activo</option>
+            <option value="0">Inactivo</option>
+          </select>
+        </div>
+        <div class="form-col"></div>
+      </div>
+      <div id="msg-create" class="msg"></div>
+      <div class="modal-actions">
+        <button class="btn-modal btn-modal-print" id="btn-crear-producto" onclick="crearProducto()">Añadir producto</button>
+        <button class="btn-modal btn-modal-close" onclick="cerrarCreateModal()">Cancelar</button>
       </div>
     </div>
   </div>

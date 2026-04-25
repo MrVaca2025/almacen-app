@@ -13,6 +13,72 @@ const pool = require('../db');
 
 const router = Router();
 
+// GET /api/ingresos — List all ingresos with detail lines
+// Uses JOINs to include product names and supplier info.
+// Optional query params: ?desde=YYYY-MM-DD&hasta=YYYY-MM-DD
+router.get('/', async (req, res) => {
+  try {
+    const { desde, hasta } = req.query;
+
+    let sql = `SELECT i.id_ingreso, i.fecha_ingreso, i.observacion,
+              ic.nombre AS proveedor,
+              di.cantidad_ingresada, di.precio_compra, di.estado_recepcion,
+              p.nombre AS producto
+       FROM ingreso i
+       LEFT JOIN interlocutor_comercial ic ON i.id_interlocutor = ic.id_interlocutor
+       JOIN detalle_ingreso di ON i.id_ingreso = di.id_ingreso
+       JOIN producto p ON di.id_producto = p.id_producto`;
+
+    const params = [];
+
+    if (desde && hasta) {
+      sql += ` WHERE i.fecha_ingreso BETWEEN ? AND ?`;
+      params.push(desde, hasta + ' 23:59:59');
+    } else if (desde) {
+      sql += ` WHERE i.fecha_ingreso >= ?`;
+      params.push(desde);
+    } else if (hasta) {
+      sql += ` WHERE i.fecha_ingreso <= ?`;
+      params.push(hasta + ' 23:59:59');
+    }
+
+    sql += ` ORDER BY i.id_ingreso DESC, di.id_detalle_ingreso`;
+
+    const [rows] = await pool.query(sql, params);
+
+    const ingresosMap = {};
+    for (const row of rows) {
+      if (!ingresosMap[row.id_ingreso]) {
+        ingresosMap[row.id_ingreso] = {
+          id_ingreso: row.id_ingreso,
+          fecha_ingreso: row.fecha_ingreso,
+          observacion: row.observacion,
+          proveedor: row.proveedor || '—',
+          detalles: []
+        };
+      }
+      const subtotal = (row.cantidad_ingresada || 0) * (row.precio_compra || 0);
+      ingresosMap[row.id_ingreso].detalles.push({
+        producto: row.producto,
+        cantidad_ingresada: row.cantidad_ingresada,
+        precio_compra: row.precio_compra,
+        estado_recepcion: row.estado_recepcion,
+        subtotal: subtotal
+      });
+    }
+
+    // Calculate total per ingreso
+    const result = Object.values(ingresosMap).map(ing => {
+      ing.total_ingreso = ing.detalles.reduce((sum, d) => sum + d.subtotal, 0);
+      return ing;
+    });
+
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ error: err.message || err.code || 'Error interno del servidor' });
+  }
+});
+
 // POST /api/ingresos — Register a goods receipt with detail lines
 router.post('/', async (req, res) => {
   let conn;

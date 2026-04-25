@@ -22,13 +22,16 @@ function formatCLP(value) {
 let carrito = [];
 let carritoIngreso = [];
 let ultimasVentas = [];
+let ultimosIngresos = [];
 let productosData = [];
 let categoriasData = [];
+let ingresosData = [];
 
 // Chart instances
 let chartVentasDia = null;
 let chartProductos = null;
 let chartCategorias = null;
+let chartRentabilidad = null;
 
 // Prevent double-click submissions
 let isSubmitting = false;
@@ -147,6 +150,18 @@ function getMedioPagoText(id) {
 }
 
 // =============================================
+// MODAL KEYBOARD HANDLER
+// =============================================
+
+document.addEventListener('keydown', function (e) {
+  if (e.key === 'Escape') {
+    if (document.getElementById('receipt-modal').style.display === 'flex') cerrarRecibo();
+    if (document.getElementById('edit-modal').style.display === 'flex') cerrarEditModal();
+    if (document.getElementById('create-modal').style.display === 'flex') cerrarCreateModal();
+  }
+});
+
+// =============================================
 // STOCK ALERT BANNER
 // =============================================
 
@@ -156,10 +171,12 @@ async function updateStockAlert() {
     var data = await res.json();
     if (!res.ok) return;
 
+    productosData = data;
     var critico = 0;
     var bajo = 0;
     for (var i = 0; i < data.length; i++) {
       var p = data[i];
+      if (!p.activo) continue;
       if (p.stock_actual <= Math.floor(p.stock_minimo / 2)) {
         critico++;
       } else if (p.stock_actual <= p.stock_minimo) {
@@ -205,7 +222,6 @@ function checkIngresoFields() {
 
 // =============================================
 // PRODUCT DROPDOWNS
-// Only active products appear in dropdowns.
 // =============================================
 
 async function cargarDropdownProductos() {
@@ -261,7 +277,7 @@ function onVentaProductoChange() {
 }
 
 // =============================================
-// A) PRODUCTS VIEW — with edit/toggle actions
+// A) PRODUCTS VIEW — with edit/toggle/create
 // =============================================
 
 async function cargarProductos() {
@@ -275,13 +291,13 @@ async function cargarProductos() {
       return;
     }
     if (data.length === 0) {
-      setResultado('<p>No hay productos registrados.</p>');
+      setResultado('<div class="empty-state"><p>📦 No hay productos registrados.</p><button class="btn-action btn-toggle-on" onclick="abrirCreateModal()">➕ Agregar primer producto</button></div>');
       return;
     }
 
     productosData = data;
 
-    var html = '<h2>Productos</h2>';
+    var html = '<div class="section-header"><h2>Productos</h2><button class="btn-action btn-toggle-on" onclick="abrirCreateModal()">➕ Agregar producto</button></div>';
     html += '<table>';
     html += '<tr><th>ID</th><th>Nombre</th><th>Precio venta</th><th>Stock actual</th><th>Stock mín.</th><th>Categoría</th><th>Estado</th><th>Acciones</th></tr>';
     for (var i = 0; i < data.length; i++) {
@@ -415,6 +431,100 @@ async function toggleProducto(id) {
 }
 
 // =============================================
+// CREATE PRODUCT MODAL
+// =============================================
+
+async function abrirCreateModal() {
+  if (categoriasData.length === 0) await cargarCategorias();
+
+  document.getElementById('create-nombre').value = '';
+  document.getElementById('create-descripcion').value = '';
+  document.getElementById('create-precio').value = '';
+  document.getElementById('create-stock-min').value = '';
+  document.getElementById('create-unidad-venta').value = '';
+  document.getElementById('create-unidad-compra').value = '';
+  document.getElementById('create-factor').value = '1';
+  document.getElementById('create-activo').value = '1';
+
+  var catSelect = document.getElementById('create-categoria');
+  var catHtml = '<option value="">-- Seleccionar --</option>';
+  for (var i = 0; i < categoriasData.length; i++) {
+    var c = categoriasData[i];
+    catHtml += '<option value="' + c.id_categoria + '">' + c.nombre + '</option>';
+  }
+  catSelect.innerHTML = catHtml;
+
+  clearMessage('msg-create');
+  document.getElementById('create-modal').style.display = 'flex';
+  document.getElementById('create-nombre').focus();
+}
+
+function cerrarCreateModal(event) {
+  if (event && event.target && event.target.id !== 'create-modal') return;
+  document.getElementById('create-modal').style.display = 'none';
+}
+
+async function crearProducto() {
+  clearMessage('msg-create');
+
+  var nombre = document.getElementById('create-nombre').value.trim();
+  var descripcion = document.getElementById('create-descripcion').value.trim();
+  var precio_venta = Number(document.getElementById('create-precio').value);
+  var stock_minimo = Number(document.getElementById('create-stock-min').value);
+  var unidad_venta = document.getElementById('create-unidad-venta').value.trim();
+  var unidad_compra = document.getElementById('create-unidad-compra').value.trim();
+  var factor_conversion = Number(document.getElementById('create-factor').value);
+  var id_categoria = Number(document.getElementById('create-categoria').value);
+  var activo = document.getElementById('create-activo').value === '1';
+
+  if (!nombre) { showMessage('msg-create', 'El nombre es obligatorio', 'error'); return; }
+  if (isNaN(precio_venta) || precio_venta < 0) { showMessage('msg-create', 'El precio debe ser >= 0', 'error'); return; }
+  if (isNaN(stock_minimo) || stock_minimo < 0) { showMessage('msg-create', 'El stock mínimo debe ser >= 0', 'error'); return; }
+  if (!unidad_venta) { showMessage('msg-create', 'La unidad de venta es obligatoria', 'error'); return; }
+  if (!unidad_compra) { showMessage('msg-create', 'La unidad de compra es obligatoria', 'error'); return; }
+  if (isNaN(factor_conversion) || factor_conversion <= 0) { showMessage('msg-create', 'El factor de conversión debe ser > 0', 'error'); return; }
+  if (!id_categoria) { showMessage('msg-create', 'Selecciona una categoría', 'error'); return; }
+
+  var btn = document.getElementById('btn-crear-producto');
+  btn.textContent = 'Creando...';
+  btn.disabled = true;
+
+  try {
+    var res = await fetch(API_BASE + '/api/productos', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        nombre: nombre,
+        descripcion: descripcion || null,
+        precio_venta: precio_venta,
+        stock_minimo: stock_minimo,
+        unidad_venta: unidad_venta,
+        unidad_compra: unidad_compra,
+        factor_conversion: factor_conversion,
+        activo: activo,
+        id_categoria: id_categoria
+      })
+    });
+    var data = await res.json();
+
+    if (res.ok) {
+      showToast('Producto creado: ' + nombre, 'success');
+      document.getElementById('create-modal').style.display = 'none';
+      cargarProductos();
+      cargarDropdownProductos();
+      updateStockAlert();
+    } else {
+      showMessage('msg-create', 'Error: ' + data.error, 'error');
+    }
+  } catch (err) {
+    showMessage('msg-create', 'Error de conexión: ' + err.message, 'error');
+  } finally {
+    btn.textContent = 'Añadir producto';
+    btn.disabled = false;
+  }
+}
+
+// =============================================
 // B) LOW STOCK VIEW
 // =============================================
 
@@ -429,7 +539,7 @@ async function verBajoStock() {
       return;
     }
     if (data.length === 0) {
-      setResultado('<p>No hay productos bajo stock mínimo.</p>');
+      setResultado('<div class="empty-state"><p>✅ Todos los productos tienen stock suficiente.</p></div>');
       return;
     }
 
@@ -577,9 +687,10 @@ async function registrarVenta() {
       renderCarrito();
       document.getElementById('venta-medio-pago').value = '';
       saveState();
+      var oldProds = productosData.slice();
       await cargarDropdownProductos();
       updateStockAlert();
-      checkStockAfterSale(carritoParaRecibo);
+      checkStockAfterSale(carritoParaRecibo, oldProds);
     } else {
       showMessage('msg-venta', 'Error: ' + data.error, 'error');
     }
@@ -593,16 +704,32 @@ async function registrarVenta() {
 }
 
 // Smart stock alert after sale
-function checkStockAfterSale(items) {
+function checkStockAfterSale(items, oldProds) {
   for (var i = 0; i < items.length; i++) {
     var soldItem = items[i];
     var current = productosData.find(function (p) { return p.id_producto === soldItem.id_producto; });
     if (!current) continue;
     var cleanName = getCleanName(soldItem.nombre);
     if (current.stock_actual <= Math.floor(current.stock_minimo / 2)) {
-      showToast('🔴 ' + cleanName + ' en stock CRÍTICO (' + current.stock_actual + ' unidades)', 'error');
+      showToast('🔴 ' + cleanName + ' quedó en stock CRÍTICO (' + current.stock_actual + ')', 'error');
     } else if (current.stock_actual <= current.stock_minimo) {
-      showToast('🟡 ' + cleanName + ' con bajo stock (' + current.stock_actual + ' unidades)', 'warning');
+      showToast('⚠️ ' + cleanName + ' quedó bajo stock (' + current.stock_actual + ')', 'warning');
+    }
+  }
+}
+
+// Smart stock alert after ingreso (recovery)
+function checkStockAfterIngreso(items, oldProds) {
+  for (var i = 0; i < items.length; i++) {
+    var ingresoItem = items[i];
+    var current = productosData.find(function (p) { return p.id_producto === ingresoItem.id_producto; });
+    var old = oldProds.find(function (p) { return p.id_producto === ingresoItem.id_producto; });
+    if (!current || !old) continue;
+    var cleanName = getCleanName(ingresoItem.nombre);
+    var wasLow = old.stock_actual <= old.stock_minimo;
+    var isNowOk = current.stock_actual > current.stock_minimo;
+    if (wasLow && isNowOk) {
+      showToast('✅ ' + cleanName + ' volvió a stock OK (' + current.stock_actual + ')', 'success');
     }
   }
 }
@@ -763,6 +890,8 @@ async function registrarIngreso() {
     };
   });
 
+  var carritoParaAlerta = carritoIngreso.slice();
+
   try {
     var res = await fetch(API_BASE + '/api/ingresos', {
       method: 'POST',
@@ -778,8 +907,10 @@ async function registrarIngreso() {
       document.getElementById('ingreso-interlocutor').value = '';
       checkIngresoFields();
       saveState();
-      cargarDropdownProductos();
+      var oldProds = productosData.slice();
+      await cargarDropdownProductos();
       updateStockAlert();
+      checkStockAfterIngreso(carritoParaAlerta, oldProds);
     } else {
       showMessage('msg-ingreso', 'Error: ' + data.error, 'error');
     }
@@ -793,8 +924,7 @@ async function registrarIngreso() {
 }
 
 // =============================================
-// E) DASHBOARD — with revenue chart, pie chart,
-//    and "producto más rentable" KPI
+// E) DASHBOARD — with margin, profitability
 // =============================================
 
 async function verDashboard() {
@@ -802,36 +932,77 @@ async function verDashboard() {
   try {
     var results = await Promise.all([
       fetch(API_BASE + '/api/dashboard'),
-      fetch(API_BASE + '/api/ventas')
+      fetch(API_BASE + '/api/ventas'),
+      fetch(API_BASE + '/api/ingresos')
     ]);
 
     var resDash = results[0];
     var resVentas = results[1];
+    var resIngresos = results[2];
 
     var data = await resDash.json();
     var ventas = resVentas.ok ? await resVentas.json() : [];
+    var ingresos = resIngresos.ok ? await resIngresos.json() : [];
+
+    ingresosData = ingresos;
 
     if (!resDash.ok) {
       setResultado('<p class="error">Error: ' + (data.error || 'No se pudo cargar el dashboard') + '</p>');
       return;
     }
 
-    // Calculate "producto más rentable" (highest total revenue)
+    // Calculate revenue per product
     var revenueByProduct = {};
+    var qtyByProduct = {};
     for (var v = 0; v < ventas.length; v++) {
       var detalles = ventas[v].detalles;
       for (var d = 0; d < detalles.length; d++) {
         var det = detalles[d];
         if (!revenueByProduct[det.producto]) revenueByProduct[det.producto] = 0;
+        if (!qtyByProduct[det.producto]) qtyByProduct[det.producto] = 0;
         revenueByProduct[det.producto] += Number(det.subtotal);
+        qtyByProduct[det.producto] += Number(det.cantidad_vendida);
       }
     }
+
+    // Calculate average purchase price per product from ingresos
+    var costByProduct = {};
+    var costCountByProduct = {};
+    for (var ig = 0; ig < ingresos.length; ig++) {
+      var igDets = ingresos[ig].detalles;
+      for (var igd = 0; igd < igDets.length; igd++) {
+        var igd2 = igDets[igd];
+        if (!costByProduct[igd2.producto]) { costByProduct[igd2.producto] = 0; costCountByProduct[igd2.producto] = 0; }
+        costByProduct[igd2.producto] += Number(igd2.precio_compra || 0) * Number(igd2.cantidad_ingresada);
+        costCountByProduct[igd2.producto] += Number(igd2.cantidad_ingresada);
+      }
+    }
+
+    // Average cost per unit
+    var avgCostPerUnit = {};
+    for (var pName in costByProduct) {
+      avgCostPerUnit[pName] = costCountByProduct[pName] > 0 ? costByProduct[pName] / costCountByProduct[pName] : 0;
+    }
+
+    // Estimated cost of goods sold
+    var totalRevenue = 0;
+    var totalEstCost = 0;
+    var profitByProduct = {};
+    for (var pn in revenueByProduct) {
+      totalRevenue += revenueByProduct[pn];
+      var estCost = (avgCostPerUnit[pn] || 0) * (qtyByProduct[pn] || 0);
+      totalEstCost += estCost;
+      profitByProduct[pn] = revenueByProduct[pn] - estCost;
+    }
+    var estimatedMargin = totalRevenue - totalEstCost;
+
+    // Top product by revenue
     var topProducto = '—';
     var topRevenue = 0;
-    for (var pName in revenueByProduct) {
-      if (revenueByProduct[pName] > topRevenue) {
-        topRevenue = revenueByProduct[pName];
-        topProducto = pName;
+    for (var pName2 in revenueByProduct) {
+      if (revenueByProduct[pName2] > topRevenue) {
+        topRevenue = revenueByProduct[pName2];
+        topProducto = pName2;
       }
     }
 
@@ -845,17 +1016,19 @@ async function verDashboard() {
     html += buildKpiCard('🏆', topProducto, 'Más rentable (' + formatCLP(topRevenue) + ')');
     html += '</div>';
 
-    html += '<h3>Ventas</h3>';
     html += '<div class="kpi-grid">';
     html += buildKpiCard('💵', formatCLP(data.ventas.ventas_totales || 0), 'Ventas totales');
     html += buildKpiCard('🧾', data.ventas.numero_ventas || 0, 'Número de ventas');
     html += buildKpiCard('🎫', formatCLP(data.ventas.ticket_promedio || 0), 'Ticket promedio');
+    html += buildKpiCard('💹', formatCLP(estimatedMargin), 'Ganancia estimada *');
     html += '</div>';
+    html += '<p class="margin-note">* Margen estimado usando precio promedio de compra de los ingresos registrados. No es un cálculo contable exacto.</p>';
 
     html += '<div class="charts-grid">';
     html += '<div class="chart-card card"><h3>📈 Ventas por día</h3><canvas id="chart-ventas-dia"></canvas></div>';
     html += '<div class="chart-card card"><h3>🏆 Ingresos por producto</h3><canvas id="chart-productos"></canvas></div>';
     html += '<div class="chart-card card"><h3>📂 Ventas por categoría</h3><canvas id="chart-categorias"></canvas></div>';
+    html += '<div class="chart-card card"><h3>💹 Rentabilidad estimada</h3><canvas id="chart-rentabilidad"></canvas></div>';
     html += '</div>';
 
     if (data.productos_bajo_stock && data.productos_bajo_stock.length > 0) {
@@ -886,16 +1059,17 @@ async function verDashboard() {
     }
 
     setResultado(html);
-    renderCharts(ventas, revenueByProduct);
+    renderCharts(ventas, revenueByProduct, profitByProduct);
   } catch (err) {
     setResultado('<p class="error">Error de conexión: ' + err.message + '</p>');
   }
 }
 
-function renderCharts(ventas, revenueByProduct) {
+function renderCharts(ventas, revenueByProduct, profitByProduct) {
   if (chartVentasDia) { chartVentasDia.destroy(); chartVentasDia = null; }
   if (chartProductos) { chartProductos.destroy(); chartProductos = null; }
   if (chartCategorias) { chartCategorias.destroy(); chartCategorias = null; }
+  if (chartRentabilidad) { chartRentabilidad.destroy(); chartRentabilidad = null; }
 
   var chartColors = ['#4361ee', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#ec4899', '#14b8a6', '#f97316', '#6366f1'];
 
@@ -917,45 +1091,49 @@ function renderCharts(ventas, revenueByProduct) {
 
   var ctxDia = document.getElementById('chart-ventas-dia');
   if (ctxDia) {
-    chartVentasDia = new Chart(ctxDia, {
-      type: 'line',
-      data: {
-        labels: fechasDisplay,
-        datasets: [{
-          label: 'Total vendido',
-          data: totalesDia,
-          borderColor: '#4361ee',
-          backgroundColor: 'rgba(67, 97, 238, 0.08)',
-          borderWidth: 2.5,
-          tension: 0.4,
-          fill: true,
-          pointBackgroundColor: '#4361ee',
-          pointRadius: 5,
-          pointHoverRadius: 7
-        }]
-      },
-      options: {
-        responsive: true,
-        plugins: {
-          legend: { display: false },
-          tooltip: {
-            callbacks: {
-              title: function (items) { return items[0].label; },
-              label: function (item) { return '→ ' + formatCLP(item.raw); }
+    if (totalesDia.length === 0) {
+      ctxDia.parentElement.innerHTML += '<p class="empty-chart">Sin datos de ventas para mostrar</p>';
+    } else {
+      chartVentasDia = new Chart(ctxDia, {
+        type: 'line',
+        data: {
+          labels: fechasDisplay,
+          datasets: [{
+            label: 'Total vendido',
+            data: totalesDia,
+            borderColor: '#4361ee',
+            backgroundColor: 'rgba(67, 97, 238, 0.08)',
+            borderWidth: 2.5,
+            tension: 0.4,
+            fill: true,
+            pointBackgroundColor: '#4361ee',
+            pointRadius: 5,
+            pointHoverRadius: 7
+          }]
+        },
+        options: {
+          responsive: true,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              callbacks: {
+                title: function (items) { return items[0].label; },
+                label: function (item) { return '→ ' + formatCLP(item.raw); }
+              }
+            }
+          },
+          scales: {
+            y: {
+              beginAtZero: true,
+              ticks: { callback: function (v) { return formatCLP(v); } }
             }
           }
-        },
-        scales: {
-          y: {
-            beginAtZero: true,
-            ticks: { callback: function (v) { return formatCLP(v); } }
-          }
         }
-      }
-    });
+      });
+    }
   }
 
-  // ---- Chart 2: Revenue by product (bar chart with CLP labels) ----
+  // ---- Chart 2: Revenue by product (bar chart) ----
   var sortedProductos = Object.entries(revenueByProduct)
     .sort(function (a, b) { return b[1] - a[1]; })
     .slice(0, 10);
@@ -965,35 +1143,39 @@ function renderCharts(ventas, revenueByProduct) {
 
   var ctxProd = document.getElementById('chart-productos');
   if (ctxProd) {
-    chartProductos = new Chart(ctxProd, {
-      type: 'bar',
-      data: {
-        labels: nombresProductos,
-        datasets: [{
-          label: 'Ingresos',
-          data: revenueProductos,
-          backgroundColor: chartColors.slice(0, nombresProductos.length),
-          borderRadius: 6
-        }]
-      },
-      options: {
-        responsive: true,
-        plugins: {
-          legend: { display: false },
-          tooltip: {
-            callbacks: {
-              label: function (item) { return item.label + ': ' + formatCLP(item.raw); }
+    if (nombresProductos.length === 0) {
+      ctxProd.parentElement.innerHTML += '<p class="empty-chart">Sin datos de productos para mostrar</p>';
+    } else {
+      chartProductos = new Chart(ctxProd, {
+        type: 'bar',
+        data: {
+          labels: nombresProductos,
+          datasets: [{
+            label: 'Ingresos',
+            data: revenueProductos,
+            backgroundColor: chartColors.slice(0, nombresProductos.length),
+            borderRadius: 6
+          }]
+        },
+        options: {
+          responsive: true,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              callbacks: {
+                label: function (item) { return item.label + ': ' + formatCLP(item.raw); }
+              }
+            }
+          },
+          scales: {
+            y: {
+              beginAtZero: true,
+              ticks: { callback: function (v) { return formatCLP(v); } }
             }
           }
-        },
-        scales: {
-          y: {
-            beginAtZero: true,
-            ticks: { callback: function (v) { return formatCLP(v); } }
-          }
         }
-      }
-    });
+      });
+    }
   }
 
   // ---- Chart 3: Ventas por categoría (pie chart) ----
@@ -1014,30 +1196,79 @@ function renderCharts(ventas, revenueByProduct) {
   var catValues = catNames.map(function (c) { return revenueByCategory[c]; });
 
   var ctxCat = document.getElementById('chart-categorias');
-  if (ctxCat && catNames.length > 0) {
-    chartCategorias = new Chart(ctxCat, {
-      type: 'pie',
-      data: {
-        labels: catNames,
-        datasets: [{
-          data: catValues,
-          backgroundColor: chartColors.slice(0, catNames.length),
-          borderWidth: 2,
-          borderColor: '#fff'
-        }]
-      },
-      options: {
-        responsive: true,
-        plugins: {
-          legend: { position: 'bottom', labels: { padding: 16, font: { size: 12 } } },
-          tooltip: {
-            callbacks: {
-              label: function (item) { return item.label + ': ' + formatCLP(item.raw); }
+  if (ctxCat) {
+    if (catNames.length === 0) {
+      ctxCat.parentElement.innerHTML += '<p class="empty-chart">Sin datos de categorías para mostrar</p>';
+    } else {
+      chartCategorias = new Chart(ctxCat, {
+        type: 'pie',
+        data: {
+          labels: catNames,
+          datasets: [{
+            data: catValues,
+            backgroundColor: chartColors.slice(0, catNames.length),
+            borderWidth: 2,
+            borderColor: '#fff'
+          }]
+        },
+        options: {
+          responsive: true,
+          plugins: {
+            legend: { position: 'bottom', labels: { padding: 16, font: { size: 12 } } },
+            tooltip: {
+              callbacks: {
+                label: function (item) { return item.label + ': ' + formatCLP(item.raw); }
+              }
             }
           }
         }
-      }
-    });
+      });
+    }
+  }
+
+  // ---- Chart 4: Rentabilidad estimada por producto (bar chart) ----
+  var sortedProfit = Object.entries(profitByProduct)
+    .sort(function (a, b) { return b[1] - a[1]; })
+    .slice(0, 10);
+
+  var profitNames = sortedProfit.map(function (e) { return e[0]; });
+  var profitValues = sortedProfit.map(function (e) { return e[1]; });
+  var profitColors = profitValues.map(function (v) { return v >= 0 ? '#10b981' : '#ef4444'; });
+
+  var ctxRent = document.getElementById('chart-rentabilidad');
+  if (ctxRent) {
+    if (profitNames.length === 0) {
+      ctxRent.parentElement.innerHTML += '<p class="empty-chart">Sin datos para calcular rentabilidad</p>';
+    } else {
+      chartRentabilidad = new Chart(ctxRent, {
+        type: 'bar',
+        data: {
+          labels: profitNames,
+          datasets: [{
+            label: 'Ganancia estimada',
+            data: profitValues,
+            backgroundColor: profitColors,
+            borderRadius: 6
+          }]
+        },
+        options: {
+          responsive: true,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              callbacks: {
+                label: function (item) { return item.label + ': ' + formatCLP(item.raw); }
+              }
+            }
+          },
+          scales: {
+            y: {
+              ticks: { callback: function (v) { return formatCLP(v); } }
+            }
+          }
+        }
+      });
+    }
   }
 }
 
@@ -1083,7 +1314,7 @@ async function cargarVentas(queryString) {
     ultimasVentas = data;
 
     if (data.length === 0) {
-      setResultado('<p>No hay ventas en el rango seleccionado.</p>');
+      setResultado('<div class="empty-state"><p>🕐 No hay ventas registradas en el rango seleccionado.</p></div>');
       return;
     }
 
@@ -1116,7 +1347,73 @@ async function cargarVentas(queryString) {
 }
 
 // =============================================
-// G) CSV EXPORT
+// G) INGRESO HISTORY
+// =============================================
+
+async function verHistorialIngresos() {
+  await cargarIngresos('');
+}
+
+async function filtrarIngresos() {
+  var desde = document.getElementById('filtro-desde').value;
+  var hasta = document.getElementById('filtro-hasta').value;
+  saveState();
+  var queryString = '';
+  var params = [];
+  if (desde) params.push('desde=' + desde);
+  if (hasta) params.push('hasta=' + hasta);
+  if (params.length > 0) queryString = '?' + params.join('&');
+  await cargarIngresos(queryString);
+}
+
+async function cargarIngresos(queryString) {
+  setResultado('<div class="loading-spinner"></div> Cargando historial de ingresos...');
+  try {
+    var res = await fetch(API_BASE + '/api/ingresos' + queryString);
+    var data = await res.json();
+
+    if (!res.ok) {
+      setResultado('<p class="error">Error: ' + (data.error || 'No se pudo cargar el historial') + '</p>');
+      return;
+    }
+
+    ultimosIngresos = data;
+
+    if (data.length === 0) {
+      setResultado('<div class="empty-state"><p>📥 No hay ingresos registrados en el rango seleccionado.</p></div>');
+      return;
+    }
+
+    var html = '<h2>📥 Historial de Ingresos (' + data.length + ')</h2>';
+    html += '<table>';
+    html += '<tr><th>ID</th><th>Fecha</th><th>Proveedor</th><th>Productos ingresados</th><th>Total</th></tr>';
+
+    for (var i = 0; i < data.length; i++) {
+      var ingreso = data[i];
+      var productosTexto = ingreso.detalles.map(function (d) {
+        return d.producto + ' x' + d.cantidad_ingresada + ' (' + formatCLP(d.subtotal) + ')';
+      }).join(', ');
+
+      var fecha = new Date(ingreso.fecha_ingreso).toLocaleString('es-CL');
+
+      html += '<tr>';
+      html += '<td>' + ingreso.id_ingreso + '</td>';
+      html += '<td>' + fecha + '</td>';
+      html += '<td>' + ingreso.proveedor + '</td>';
+      html += '<td>' + productosTexto + '</td>';
+      html += '<td>' + formatCLP(ingreso.total_ingreso) + '</td>';
+      html += '</tr>';
+    }
+
+    html += '</table>';
+    setResultado(html);
+  } catch (err) {
+    setResultado('<p class="error">Error de conexión: ' + err.message + '</p>');
+  }
+}
+
+// =============================================
+// H) CSV EXPORT
 // =============================================
 
 function exportarCSV() {

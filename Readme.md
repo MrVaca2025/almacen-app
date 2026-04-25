@@ -691,8 +691,52 @@ El dashboard incluye:
 | PATCH | `/api/productos/:id/toggle` | Activar/desactivar producto |
 | GET | `/api/productos/categorias` | Listar categorías (para edit modal) |
 
+### 11.15 Crear producto (Phase 3)
+
+Desde "Cargar productos" → click **"➕ Agregar producto"** → modal con campos:
+- Nombre, descripción, precio venta, stock mínimo, unidad venta, unidad compra, factor conversión, categoría, estado
+- Validaciones: nombre obligatorio, precio >= 0, stock mínimo >= 0, factor > 0, categoría obligatoria
+- Se envía via `POST /api/productos`
+- Al crear: se cierra modal, se actualiza tabla y dropdowns
+
+### 11.16 Historial de ingresos (Phase 3)
+
+Click **"📥 Historial ingresos"** para ver todos los ingresos registrados.
+- Muestra: ID, fecha, proveedor, productos ingresados (inline), total
+- Filtrando por fecha: usa los mismos inputs Desde/Hasta + botón "Filtrar ingresos"
+- Endpoint: `GET /api/ingresos` con `?desde=YYYY-MM-DD&hasta=YYYY-MM-DD` opcionales
+
+### 11.17 Ganancia estimada (Phase 3)
+
+El dashboard muestra "Ganancia estimada" calculada como:
+```
+ganancia = ingresos_por_ventas - costo_estimado_productos_vendidos
+```
+- El costo se calcula usando el **precio promedio de compra** de los ingresos registrados
+- Se muestra un disclaimer: "Margen estimado usando precio promedio de compra"
+- Gráfico adicional: "Rentabilidad estimada por producto" (barras verdes/rojas)
+
+### 11.18 Alertas de recuperación de stock (Phase 3)
+
+Después de un ingreso, si un producto sale de estado "bajo stock" a "OK", aparece un toast:
+- "✅ Coca Cola volvió a stock OK (25)"
+
+### 11.19 Endpoints agregados (Phase 3)
+
+| Método | Ruta | Descripción |
+|--------|------|-------------|
+| GET | `/api/ingresos` | Listar ingresos con detalles |
+| GET | `/api/ingresos?desde=&hasta=` | Filtrar ingresos por fecha |
+
+### 11.20 Cómo probar Phase 3
+
+1. **Crear producto**: Cargar productos → "Agregar producto" → llenar campos → "Añadir producto" → verificar en tabla
+2. **Historial ingresos**: "Historial ingresos" → verificar tabla con ingresos
+3. **Filtrar ingresos**: Poner fechas → "Filtrar ingresos"
+4. **Ganancia estimada**: "Ver dashboard" → verificar KPI "Ganancia estimada" y gráfico de rentabilidad
+5. **Alerta recovery**: Registrar ingreso de producto bajo stock → verificar toast verde
+
 ## 12. Próximos pasos
 
 1. Implementar login básico para operadores.
-2. Agregar formulario para crear productos nuevos.
-3. Probar flujo completo con múltiples usuarios.
+2. Probar flujo completo con múltiples usuarios.
