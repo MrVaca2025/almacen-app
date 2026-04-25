@@ -244,6 +244,11 @@ tbody tr:last-child td {
   color: #92400e;
 }
 
+.badge-critical {
+  background-color: #fee2e2;
+  color: #991b1b;
+}
+
 .badge-info {
   background-color: #dbeafe;
   color: #1e40af;
@@ -401,6 +406,20 @@ tbody tr:last-child td {
   background-color: #fee2e2;
   color: #991b1b;
   border: 1px solid #fecaca;
+}
+
+.msg.warning {
+  background-color: #fef3c7;
+  color: #92400e;
+  border: 1px solid #fde68a;
+}
+
+/* Disabled buttons */
+button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  transform: none !important;
+  box-shadow: none !important;
 }
 
 /* =============================================

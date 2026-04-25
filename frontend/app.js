@@ -6,7 +6,7 @@ const API_BASE = 'http://localhost:3000';
 
 // =============================================
 // SALE CART — stores items before submitting
-// Each item: { id_producto, nombre, cantidad_vendida, precio_unitario }
+// Each item: { id_producto, nombre, cantidad_vendida, precio_unitario, stock_disponible }
 // =============================================
 let carrito = [];
 
@@ -16,14 +16,20 @@ let carrito = [];
 let ultimasVentas = [];
 
 // =============================================
+// PRODUCT DATA — stores loaded products for
+// stock validation and badge rendering
+// =============================================
+let productosData = [];
+
+// =============================================
 // HELPER FUNCTIONS
 // =============================================
 
-// showMessage — Display a success or error message inside a target element
+// showMessage — Display a success, error, or warning message
 function showMessage(elementId, text, type) {
   const el = document.getElementById(elementId);
   el.textContent = text;
-  el.className = 'msg ' + type; // 'success' or 'error'
+  el.className = 'msg ' + type; // 'success', 'error', or 'warning'
 }
 
 // clearMessage — Remove message from a target element
@@ -38,11 +44,53 @@ function setResultado(html) {
   document.getElementById('resultado').innerHTML = html;
 }
 
+// getStockBadge — Return badge HTML based on 3-level stock status
+// OK: stock > minimo | Bajo stock: stock <= minimo | Crítico: stock <= minimo/2
+function getStockBadge(stockActual, stockMinimo) {
+  if (stockActual <= Math.floor(stockMinimo / 2)) {
+    return '<span class="badge badge-critical">Crítico</span>';
+  } else if (stockActual <= stockMinimo) {
+    return '<span class="badge badge-warning">Bajo stock</span>';
+  }
+  return '<span class="badge badge-success">OK</span>';
+}
+
+// getStockIndicator — Return colored text for dropdown options
+function getStockIndicator(stockActual, stockMinimo) {
+  if (stockActual <= Math.floor(stockMinimo / 2)) {
+    return '🔴';
+  } else if (stockActual <= stockMinimo) {
+    return '🟡';
+  }
+  return '🟢';
+}
+
+// =============================================
+// FORM VALIDATION STATE
+// Checks required fields and enables/disables buttons
+// =============================================
+
+function checkVentaFields() {
+  const producto = document.getElementById('venta-producto').value;
+  const cantidad = document.getElementById('venta-cantidad').value;
+  const precio = document.getElementById('venta-precio').value;
+  const btn = document.getElementById('btn-agregar-carrito');
+  btn.disabled = !(producto && cantidad && precio);
+}
+
+function checkIngresoFields() {
+  const proveedor = document.getElementById('ingreso-interlocutor').value;
+  const producto = document.getElementById('ingreso-producto').value;
+  const cantidad = document.getElementById('ingreso-cantidad').value;
+  const precio = document.getElementById('ingreso-precio').value;
+  const btn = document.getElementById('btn-registrar-ingreso');
+  btn.disabled = !(proveedor && producto && cantidad && precio);
+}
+
 // =============================================
 // PRODUCT DROPDOWNS
-// Fetches products from the API and populates
-// all <select> elements that need product options.
-// Called on page load and after ingreso/venta.
+// Fetches products from the API, stores data,
+// and populates <select> elements with stock indicators.
 // =============================================
 
 async function cargarDropdownProductos() {
@@ -50,23 +98,29 @@ async function cargarDropdownProductos() {
     const res = await fetch(API_BASE + '/api/productos');
     const data = await res.json();
 
-    if (!res.ok) return; // silently fail — dropdowns show default text
+    if (!res.ok) return;
 
-    // Build option elements: "ID — Nombre (Stock: X, $Precio)"
+    // Store product data for stock validation
+    productosData = data;
+
+    // Build option elements with stock indicator emoji
     const options = data.map(function (p) {
-      return '<option value="' + p.id_producto + '">'
-        + p.id_producto + ' — ' + p.nombre
+      const indicator = getStockIndicator(p.stock_actual, p.stock_minimo);
+      return '<option value="' + p.id_producto + '" data-stock="' + p.stock_actual + '" data-minimo="' + p.stock_minimo + '" data-precio="' + p.precio_venta + '">'
+        + indicator + ' ' + p.id_producto + ' — ' + p.nombre
         + ' (Stock: ' + p.stock_actual + ', $' + p.precio_venta + ')'
         + '</option>';
     });
 
     const optionsHtml = '<option value="">-- Seleccionar producto --</option>' + options.join('');
 
-    // Populate both dropdowns (venta and ingreso)
     document.getElementById('venta-producto').innerHTML = optionsHtml;
     document.getElementById('ingreso-producto').innerHTML = optionsHtml;
+
+    // Re-check field state after loading
+    checkVentaFields();
+    checkIngresoFields();
   } catch (err) {
-    // If the backend is not running, show fallback text
     const fallback = '<option value="">-- Error al cargar productos --</option>';
     document.getElementById('venta-producto').innerHTML = fallback;
     document.getElementById('ingreso-producto').innerHTML = fallback;
@@ -75,22 +129,21 @@ async function cargarDropdownProductos() {
 
 // Auto-fill price when a product is selected in the venta dropdown
 function onVentaProductoChange() {
-  // We store product data from the last dropdown load to auto-fill price
   const select = document.getElementById('venta-producto');
   const option = select.options[select.selectedIndex];
   if (option && option.value) {
-    // Extract price from the option text: "... $PRICE)"
-    const match = option.textContent.match(/\$(\d+(?:\.\d+)?)\)/);
-    if (match) {
-      document.getElementById('venta-precio').value = match[1];
+    const precio = option.getAttribute('data-precio');
+    if (precio) {
+      document.getElementById('venta-precio').value = precio;
     }
   }
+  checkVentaFields();
 }
 
 // =============================================
 // A) PRODUCTS VIEW
-// Fetches all products from GET /api/productos
-// and displays them in a table.
+// Fetches all products and displays them with
+// 3-level stock badges and active status badges.
 // =============================================
 
 async function cargarProductos() {
@@ -109,17 +162,11 @@ async function cargarProductos() {
       return;
     }
 
-    // Build HTML table with product data and badges
     let html = '<h2>Productos</h2>';
     html += '<table>';
     html += '<tr><th>ID</th><th>Nombre</th><th>Precio venta</th><th>Stock actual</th><th>Stock mínimo</th><th>Categoría</th><th>Estado</th></tr>';
     for (const p of data) {
-      // Badge for stock level
-      const stockBajo = p.stock_actual <= p.stock_minimo;
-      const stockBadge = stockBajo
-        ? '<span class="badge badge-danger">Bajo</span>'
-        : '<span class="badge badge-success">OK</span>';
-      // Badge for active status
+      const stockBadge = getStockBadge(p.stock_actual, p.stock_minimo);
       const activoBadge = p.activo
         ? '<span class="badge badge-success">Activo</span>'
         : '<span class="badge badge-warning">Inactivo</span>';
@@ -137,14 +184,14 @@ async function cargarProductos() {
     html += '</table>';
     setResultado(html);
   } catch (err) {
-    setResultado('<p style="color:red;">Error de conexión: ' + err.message + '</p>');
+    setResultado('<p class="error">Error de conexión: ' + err.message + '</p>');
   }
 }
 
 // =============================================
 // B) LOW STOCK VIEW
-// Fetches products below minimum stock from
-// GET /api/productos/bajo-stock
+// Fetches products below minimum stock with
+// 3-level stock badges on each row.
 // =============================================
 
 async function verBajoStock() {
@@ -165,19 +212,21 @@ async function verBajoStock() {
 
     let html = '<h2>Productos bajo stock mínimo</h2>';
     html += '<table>';
-    html += '<tr><th>Nombre</th><th>Stock actual</th><th>Stock mínimo</th><th>Déficit</th></tr>';
+    html += '<tr><th>Nombre</th><th>Stock actual</th><th>Stock mínimo</th><th>Déficit</th><th>Estado</th></tr>';
     for (const p of data) {
+      const stockBadge = getStockBadge(p.stock_actual, p.stock_minimo);
       html += '<tr>';
       html += '<td>' + p.nombre + '</td>';
-      html += '<td>' + p.stock_actual + ' <span class="badge badge-danger">Bajo</span></td>';
+      html += '<td>' + p.stock_actual + '</td>';
       html += '<td>' + p.stock_minimo + '</td>';
-      html += '<td><span class="badge badge-warning">' + p.deficit + '</span></td>';
+      html += '<td>' + p.deficit + '</td>';
+      html += '<td>' + stockBadge + '</td>';
       html += '</tr>';
     }
     html += '</table>';
     setResultado(html);
   } catch (err) {
-    setResultado('<p style="color:red;">Error de conexión: ' + err.message + '</p>');
+    setResultado('<p class="error">Error de conexión: ' + err.message + '</p>');
   }
 }
 
@@ -185,9 +234,10 @@ async function verBajoStock() {
 // C) SALE CART
 // Users add products to the cart one at a time,
 // then submit all items as a single sale.
+// Validates stock availability and merges duplicates.
 // =============================================
 
-// agregarAlCarrito — Validate inputs and add an item to the cart array
+// agregarAlCarrito — Validate inputs, check stock, merge duplicates
 function agregarAlCarrito() {
   clearMessage('msg-venta');
 
@@ -197,30 +247,56 @@ function agregarAlCarrito() {
   const cantidad_vendida = Number(document.getElementById('venta-cantidad').value);
   const precio_unitario = Number(document.getElementById('venta-precio').value);
 
-  // Validate all fields
+  // Validate required fields
   if (!id_producto) {
-    showMessage('msg-venta', 'Seleccione un producto', 'error');
+    showMessage('msg-venta', 'Selecciona un producto', 'error');
     return;
   }
   if (!cantidad_vendida || cantidad_vendida <= 0) {
-    showMessage('msg-venta', 'Ingrese una cantidad válida', 'error');
+    showMessage('msg-venta', 'Cantidad inválida', 'error');
     return;
   }
   if (!precio_unitario || precio_unitario <= 0) {
-    showMessage('msg-venta', 'Ingrese un precio válido', 'error');
+    showMessage('msg-venta', 'Precio inválido', 'error');
     return;
   }
 
-  // Add item to cart array
-  carrito.push({ id_producto, nombre, cantidad_vendida, precio_unitario });
+  // Get available stock from product data
+  const producto = productosData.find(function (p) { return p.id_producto === id_producto; });
+  const stockDisponible = producto ? producto.stock_actual : 0;
 
-  // Clear the input fields (keep medio de pago selected)
+  // Calculate total quantity already in cart for this product
+  let cantidadEnCarrito = 0;
+  for (let i = 0; i < carrito.length; i++) {
+    if (carrito[i].id_producto === id_producto) {
+      cantidadEnCarrito += carrito[i].cantidad_vendida;
+    }
+  }
+
+  // Validate total quantity vs available stock
+  if (cantidad_vendida + cantidadEnCarrito > stockDisponible) {
+    showMessage('msg-venta', 'Stock insuficiente. Disponible: ' + (stockDisponible - cantidadEnCarrito) + ' unidades', 'error');
+    return;
+  }
+
+  // Check if product already exists in cart — merge quantities
+  const existente = carrito.find(function (item) { return item.id_producto === id_producto; });
+  if (existente) {
+    existente.cantidad_vendida += cantidad_vendida;
+    existente.precio_unitario = precio_unitario;
+    showMessage('msg-venta', 'Cantidad actualizada en el carrito', 'success');
+  } else {
+    carrito.push({ id_producto, nombre, cantidad_vendida, precio_unitario, stock_disponible: stockDisponible });
+    showMessage('msg-venta', 'Producto agregado al carrito', 'success');
+  }
+
+  // Clear input fields
   document.getElementById('venta-producto').value = '';
   document.getElementById('venta-cantidad').value = '';
   document.getElementById('venta-precio').value = '';
+  checkVentaFields();
 
   renderCarrito();
-  showMessage('msg-venta', 'Producto agregado al carrito', 'success');
 }
 
 // renderCarrito — Rebuild the cart table from the carrito array
@@ -242,9 +318,12 @@ function renderCarrito() {
     const subtotal = item.cantidad_vendida * item.precio_unitario;
     total += subtotal;
 
-    // Each row shows product name, quantity, unit price, subtotal, and a remove button
+    // Extract clean product name from dropdown text
+    const parts = item.nombre.split(' — ');
+    const cleanName = parts.length > 1 ? parts[1].split(' (')[0] : item.nombre;
+
     html += '<tr>';
-    html += '<td>' + item.nombre.split(' — ')[1].split(' (')[0] + '</td>'; // extract clean name
+    html += '<td>' + cleanName + '</td>';
     html += '<td>' + item.cantidad_vendida + '</td>';
     html += '<td>$' + item.precio_unitario + '</td>';
     html += '<td>$' + subtotal + '</td>';
@@ -268,15 +347,14 @@ async function registrarVenta() {
 
   const id_medio_pago = Number(document.getElementById('venta-medio-pago').value);
   if (!id_medio_pago) {
-    showMessage('msg-venta', 'Seleccione un medio de pago', 'error');
+    showMessage('msg-venta', 'Selecciona un medio de pago', 'error');
     return;
   }
   if (carrito.length === 0) {
-    showMessage('msg-venta', 'El carrito está vacío. Agregue productos primero.', 'error');
+    showMessage('msg-venta', 'El carrito está vacío. Agrega productos primero.', 'error');
     return;
   }
 
-  // Build detalles array from cart items
   const detalles = carrito.map(function (item) {
     return {
       id_producto: item.id_producto,
@@ -297,14 +375,12 @@ async function registrarVenta() {
 
     if (res.ok) {
       showMessage('msg-venta', 'Venta registrada. ID: ' + data.id_venta + ' | Total: $' + data.total_venta, 'success');
-      // Clear cart and refresh product dropdowns to show updated stock
       carrito = [];
       renderCarrito();
       document.getElementById('venta-medio-pago').value = '';
       cargarDropdownProductos();
-      cargarProductos(); // refresh product table if visible
+      cargarProductos();
     } else {
-      // Show the API error message (e.g. "Stock insuficiente: ...")
       showMessage('msg-venta', 'Error: ' + data.error, 'error');
     }
   } catch (err) {
@@ -314,28 +390,37 @@ async function registrarVenta() {
 
 // =============================================
 // D) CREATE INGRESO
-// Reads form inputs and sends POST /api/ingresos
-// with the goods receipt details.
-// Stock is updated automatically by the database
-// trigger (trg_aumentar_stock_ingreso).
+// Validates all fields before sending POST /api/ingresos.
+// Stock updated by trigger (trg_aumentar_stock_ingreso).
 // =============================================
 
 async function registrarIngreso(event) {
   event.preventDefault();
   clearMessage('msg-ingreso');
 
-  // Read form values from inputs and dropdown
   const id_interlocutor = Number(document.getElementById('ingreso-interlocutor').value);
   const id_producto = Number(document.getElementById('ingreso-producto').value);
   const cantidad_ingresada = Number(document.getElementById('ingreso-cantidad').value);
   const precio_compra = Number(document.getElementById('ingreso-precio').value);
 
+  // Validate all required fields
+  if (!id_interlocutor || id_interlocutor <= 0) {
+    showMessage('msg-ingreso', 'Ingresa un ID de proveedor válido', 'error');
+    return;
+  }
   if (!id_producto) {
-    showMessage('msg-ingreso', 'Seleccione un producto', 'error');
+    showMessage('msg-ingreso', 'Selecciona un producto', 'error');
+    return;
+  }
+  if (!cantidad_ingresada || cantidad_ingresada <= 0) {
+    showMessage('msg-ingreso', 'Cantidad inválida', 'error');
+    return;
+  }
+  if (precio_compra < 0) {
+    showMessage('msg-ingreso', 'El precio no puede ser negativo', 'error');
     return;
   }
 
-  // Build request body matching the API format
   const body = {
     id_interlocutor: id_interlocutor,
     detalles: [
@@ -359,7 +444,7 @@ async function registrarIngreso(event) {
     if (res.ok) {
       showMessage('msg-ingreso', 'Ingreso registrado. ID: ' + data.id_ingreso, 'success');
       document.getElementById('form-ingreso').reset();
-      // Refresh product dropdowns and table to show updated stock
+      checkIngresoFields();
       cargarDropdownProductos();
       cargarProductos();
     } else {
@@ -373,7 +458,7 @@ async function registrarIngreso(event) {
 // =============================================
 // E) DASHBOARD
 // Fetches KPIs from GET /api/dashboard and
-// displays them in a readable format.
+// displays them with badges on bajo-stock items.
 // =============================================
 
 async function verDashboard() {
@@ -387,7 +472,6 @@ async function verDashboard() {
       return;
     }
 
-    // KPI cards
     let html = '<h2>Dashboard</h2>';
     html += '<div class="kpi-grid">';
     html += buildKpiCard(data.kpis.productos_activos, 'Productos activos');
@@ -397,7 +481,6 @@ async function verDashboard() {
     html += buildKpiCard(data.kpis.productos_bajo_stock, 'Productos bajo stock');
     html += '</div>';
 
-    // Sales KPIs
     html += '<h3>Ventas</h3>';
     html += '<div class="kpi-grid">';
     html += buildKpiCard('$' + (data.ventas.ventas_totales || 0), 'Ventas totales');
@@ -405,23 +488,23 @@ async function verDashboard() {
     html += buildKpiCard('$' + (data.ventas.ticket_promedio || 0), 'Ticket promedio');
     html += '</div>';
 
-    // Low stock products table
     if (data.productos_bajo_stock && data.productos_bajo_stock.length > 0) {
       html += '<h3>Productos bajo stock</h3>';
       html += '<table>';
-      html += '<tr><th>Nombre</th><th>Stock actual</th><th>Stock mínimo</th><th>Déficit</th></tr>';
+      html += '<tr><th>Nombre</th><th>Stock actual</th><th>Stock mínimo</th><th>Déficit</th><th>Estado</th></tr>';
       for (const p of data.productos_bajo_stock) {
+        const stockBadge = getStockBadge(p.stock_actual, p.stock_minimo);
         html += '<tr>';
         html += '<td>' + p.nombre + '</td>';
         html += '<td>' + p.stock_actual + '</td>';
         html += '<td>' + p.stock_minimo + '</td>';
         html += '<td>' + p.deficit + '</td>';
+        html += '<td>' + stockBadge + '</td>';
         html += '</tr>';
       }
       html += '</table>';
     }
 
-    // Top selling products table
     if (data.mas_vendidos && data.mas_vendidos.length > 0) {
       html += '<h3 style="margin-top:16px;">Productos más vendidos</h3>';
       html += '<table>';
@@ -437,7 +520,7 @@ async function verDashboard() {
 
     setResultado(html);
   } catch (err) {
-    setResultado('<p style="color:red;">Error de conexión: ' + err.message + '</p>');
+    setResultado('<p class="error">Error de conexión: ' + err.message + '</p>');
   }
 }
 
@@ -456,17 +539,14 @@ function buildKpiCard(value, label) {
 // Stores loaded data in ultimasVentas for CSV export.
 // =============================================
 
-// verHistorialVentas — Load all sales (no filter)
 async function verHistorialVentas() {
   await cargarVentas('');
 }
 
-// filtrarVentas — Load sales filtered by date range
 async function filtrarVentas() {
   const desde = document.getElementById('filtro-desde').value;
   const hasta = document.getElementById('filtro-hasta').value;
 
-  // Build query string from date inputs
   let queryString = '';
   const params = [];
   if (desde) params.push('desde=' + desde);
@@ -476,8 +556,6 @@ async function filtrarVentas() {
   await cargarVentas(queryString);
 }
 
-// cargarVentas — Shared function to fetch and display sales
-// queryString can be empty or contain date filter params
 async function cargarVentas(queryString) {
   setResultado('Cargando historial de ventas...');
   try {
@@ -489,7 +567,6 @@ async function cargarVentas(queryString) {
       return;
     }
 
-    // Store data for CSV export
     ultimasVentas = data;
 
     if (data.length === 0) {
@@ -502,12 +579,10 @@ async function cargarVentas(queryString) {
     html += '<tr><th>ID</th><th>Fecha</th><th>Medio de pago</th><th>Productos vendidos</th><th>Total</th></tr>';
 
     for (const venta of data) {
-      // Build inline product list: "Coca Cola x2 ($1600), Pan hallulla x3 ($600)"
       const productosTexto = venta.detalles.map(function (d) {
         return d.producto + ' x' + d.cantidad_vendida + ' ($' + d.subtotal + ')';
       }).join(', ');
 
-      // Format date to readable string
       const fecha = new Date(venta.fecha_venta).toLocaleString('es-CL');
 
       html += '<tr>';
@@ -522,7 +597,7 @@ async function cargarVentas(queryString) {
     html += '</table>';
     setResultado(html);
   } catch (err) {
-    setResultado('<p style="color:red;">Error de conexión: ' + err.message + '</p>');
+    setResultado('<p class="error">Error de conexión: ' + err.message + '</p>');
   }
 }
 
@@ -539,10 +614,8 @@ function exportarCSV() {
     return;
   }
 
-  // CSV header row
   const headers = ['ID venta', 'Fecha', 'Medio de pago', 'Producto', 'Cantidad', 'Precio unitario', 'Subtotal', 'Total venta'];
 
-  // Build CSV rows — one row per detail line
   const rows = [];
   for (const venta of ultimasVentas) {
     const fecha = new Date(venta.fecha_venta).toLocaleString('es-CL');
@@ -560,11 +633,9 @@ function exportarCSV() {
     }
   }
 
-  // Convert to CSV string with proper escaping
   let csv = headers.join(';') + '\n';
   for (const row of rows) {
     csv += row.map(function (val) {
-      // Wrap in quotes if value contains semicolons or quotes
       const str = String(val);
       if (str.includes(';') || str.includes('"') || str.includes('\n')) {
         return '"' + str.replace(/"/g, '""') + '"';
@@ -573,7 +644,6 @@ function exportarCSV() {
     }).join(';') + '\n';
   }
 
-  // Trigger download — BOM for Excel UTF-8 compatibility
   const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
@@ -586,10 +656,22 @@ function exportarCSV() {
 // =============================================
 // INITIALIZATION
 // Load product dropdowns when the page opens.
-// Also attach the change event for auto-fill.
+// Attach change/input events for validation state.
 // =============================================
 
 document.addEventListener('DOMContentLoaded', function () {
   cargarDropdownProductos();
+
+  // Auto-fill price on product selection
   document.getElementById('venta-producto').addEventListener('change', onVentaProductoChange);
+
+  // Enable/disable buttons based on field state
+  document.getElementById('venta-producto').addEventListener('change', checkVentaFields);
+  document.getElementById('venta-cantidad').addEventListener('input', checkVentaFields);
+  document.getElementById('venta-precio').addEventListener('input', checkVentaFields);
+
+  document.getElementById('ingreso-interlocutor').addEventListener('input', checkIngresoFields);
+  document.getElementById('ingreso-producto').addEventListener('change', checkIngresoFields);
+  document.getElementById('ingreso-cantidad').addEventListener('input', checkIngresoFields);
+  document.getElementById('ingreso-precio').addEventListener('input', checkIngresoFields);
 });
