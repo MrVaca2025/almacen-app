@@ -129,10 +129,98 @@ No se considera en la primera versión:
 - Frontend: HTML, CSS y JavaScript simple
 - Editor: Visual Studio Code
 
-## 10. Próximos pasos
+## 10. Backend (Node.js + Express)
 
-1. Crear backend con Node.js y Express.
-2. Conectar backend con MySQL.
-3. Crear endpoints para productos, ingresos, ventas y dashboard.
-4. Crear frontend simple para operar el sistema.
-5. Probar flujo completo: ingreso, venta y actualización automática de stock.
+### Requisitos previos (Windows)
+
+- [Node.js](https://nodejs.org/) v18 o superior instalado.
+- MySQL 8 corriendo en `localhost:3306` con la base de datos `almacen_db` creada (ejecutar los scripts en `/database` en orden).
+
+### Instalación
+
+```bash
+cd backend
+npm install
+```
+
+### Configuración
+
+Crear un archivo `.env` dentro de `backend/` basado en `.env.example`:
+
+```
+DB_HOST=localhost
+DB_USER=root
+DB_PASSWORD=tu_contraseña
+DB_NAME=almacen_db
+DB_PORT=3306
+PORT=3000
+```
+
+### Ejecutar en modo desarrollo
+
+```bash
+cd backend
+npm run dev
+```
+
+### Verificar que funciona
+
+Abrir en el navegador o con `curl`:
+
+```
+GET http://localhost:3000/api/health
+```
+
+Respuesta esperada:
+```json
+{ "status": "OK", "timestamp": "2025-04-25T..." }
+```
+
+### Endpoints disponibles
+
+| Método | Ruta                      | Descripción                          |
+|--------|---------------------------|--------------------------------------|
+| GET    | /api/health               | Health check                         |
+| GET    | /api/productos            | Listar todos los productos           |
+| POST   | /api/productos            | Crear un producto                    |
+| GET    | /api/productos/bajo-stock | Productos bajo stock mínimo          |
+| POST   | /api/ingresos             | Registrar ingreso de mercadería      |
+| POST   | /api/ventas               | Registrar una venta                  |
+| GET    | /api/dashboard            | KPIs y resumen del negocio           |
+
+### Ejemplos de peticiones
+
+#### Crear un producto
+
+```bash
+curl -X POST http://localhost:3000/api/productos \
+  -H "Content-Type: application/json" \
+  -d "{\"nombre\": \"Galletas\", \"descripcion\": \"Galletas de chocolate\", \"precio_venta\": 500, \"stock_minimo\": 10, \"unidad_venta\": \"unidad\", \"unidad_compra\": \"caja\", \"factor_conversion\": 12, \"activo\": true, \"id_categoria\": 2}"
+```
+
+#### Registrar un ingreso de mercadería
+
+```bash
+curl -X POST http://localhost:3000/api/ingresos \
+  -H "Content-Type: application/json" \
+  -d "{\"id_interlocutor\": 2, \"observacion\": \"Compra semanal\", \"detalles\": [{\"id_producto\": 1, \"cantidad_ingresada\": 48, \"precio_compra\": 500, \"estado_recepcion\": \"aceptado\"}]}"
+```
+
+#### Registrar una venta
+
+```bash
+curl -X POST http://localhost:3000/api/ventas \
+  -H "Content-Type: application/json" \
+  -d "{\"id_medio_pago\": 1, \"observacion\": \"Venta al contado\", \"detalles\": [{\"id_producto\": 1, \"cantidad_vendida\": 2, \"precio_unitario\": 800}]}"
+```
+
+#### Consultar dashboard
+
+```bash
+curl http://localhost:3000/api/dashboard
+```
+
+## 11. Próximos pasos
+
+1. Crear frontend simple para operar el sistema.
+2. Probar flujo completo: ingreso, venta y actualización automática de stock.
