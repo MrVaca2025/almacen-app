@@ -511,7 +511,8 @@ start frontend\index.html
 | Cargar productos       | Muestra todos los productos en una tabla    | GET /api/productos          |
 | Ver bajo stock         | Muestra productos bajo stock mínimo         | GET /api/productos/bajo-stock |
 | Ver dashboard          | Muestra KPIs del negocio                    | GET /api/dashboard          |
-| Registrar venta        | Registra una venta con un producto          | POST /api/ventas            |
+| Ver historial de ventas| Muestra ventas con detalle de productos     | GET /api/ventas             |
+| Registrar venta        | Registra una venta con carrito              | POST /api/ventas            |
 | Registrar ingreso      | Registra un ingreso de mercadería           | POST /api/ingresos          |
 
 ### 11.5 Características UX
@@ -572,7 +573,12 @@ Seguir estos pasos en orden para probar el sistema completo:
 - Clic en **"Registrar venta"**
 - Debería aparecer mensaje rojo: "Error: Stock insuficiente: ..."
 
-**Paso 7** — Hacer clic en **"Ver bajo stock"** y **"Ver dashboard"**.
+**Paso 7** — Ver historial de ventas:
+- Clic en **"Ver historial de ventas"**
+- La tabla muestra cada venta con sus productos inline: `Coca Cola x5 ($4000)`
+- Verificar que la venta registrada en el paso 4 aparece con los detalles correctos.
+
+**Paso 8** — Hacer clic en **"Ver bajo stock"** y **"Ver dashboard"**.
 - Verificar que los datos reflejan las operaciones realizadas.
 
 ### 11.7 Datos de referencia para pruebas

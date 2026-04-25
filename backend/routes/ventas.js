@@ -15,6 +15,50 @@ const pool = require('../db');
 
 const router = Router();
 
+// GET /api/ventas — List all sales with their detail lines
+// Uses JOINs to include product names and payment method.
+// Groups detail rows by sale in JavaScript.
+router.get('/', async (_req, res) => {
+  try {
+    const [rows] = await pool.query(
+      `SELECT v.id_venta, v.fecha_venta, v.total_venta, v.observacion,
+              mp.nombre_medio_pago AS medio_pago,
+              dv.cantidad_vendida, dv.precio_unitario, dv.subtotal,
+              p.nombre AS producto
+       FROM venta v
+       JOIN medio_pago mp ON v.id_medio_pago = mp.id_medio_pago
+       JOIN detalle_venta dv ON v.id_venta = dv.id_venta
+       JOIN producto p ON dv.id_producto = p.id_producto
+       ORDER BY v.id_venta DESC, dv.id_detalle_venta`
+    );
+
+    // Group detail rows by sale ID
+    const ventasMap = {};
+    for (const row of rows) {
+      if (!ventasMap[row.id_venta]) {
+        ventasMap[row.id_venta] = {
+          id_venta: row.id_venta,
+          fecha_venta: row.fecha_venta,
+          total_venta: row.total_venta,
+          observacion: row.observacion,
+          medio_pago: row.medio_pago,
+          detalles: []
+        };
+      }
+      ventasMap[row.id_venta].detalles.push({
+        producto: row.producto,
+        cantidad_vendida: row.cantidad_vendida,
+        precio_unitario: row.precio_unitario,
+        subtotal: row.subtotal
+      });
+    }
+
+    res.json(Object.values(ventasMap));
+  } catch (err) {
+    res.status(500).json({ error: err.message || err.code || 'Error interno del servidor' });
+  }
+});
+
 // POST /api/ventas — Register a sale with detail lines
 router.post('/', async (req, res) => {
   let conn;

@@ -435,6 +435,59 @@ function buildKpiCard(value, label) {
 }
 
 // =============================================
+// F) SALES HISTORY
+// Fetches all sales from GET /api/ventas.
+// Each sale includes its detail lines (products
+// sold, quantities, prices) via SQL JOINs.
+// Displays product details inline in each row.
+// =============================================
+
+async function verHistorialVentas() {
+  setResultado('Cargando historial de ventas...');
+  try {
+    const res = await fetch(API_BASE + '/api/ventas');
+    const data = await res.json();
+
+    if (!res.ok) {
+      setResultado('<p class="error">Error: ' + (data.error || 'No se pudo cargar el historial') + '</p>');
+      return;
+    }
+
+    if (data.length === 0) {
+      setResultado('<p>No hay ventas registradas.</p>');
+      return;
+    }
+
+    let html = '<h2>Historial de Ventas</h2>';
+    html += '<table>';
+    html += '<tr><th>ID</th><th>Fecha</th><th>Medio de pago</th><th>Productos vendidos</th><th>Total</th></tr>';
+
+    for (const venta of data) {
+      // Build inline product list: "Coca Cola x2 ($1600), Pan hallulla x3 ($600)"
+      const productosTexto = venta.detalles.map(function (d) {
+        return d.producto + ' x' + d.cantidad_vendida + ' ($' + d.subtotal + ')';
+      }).join(', ');
+
+      // Format date to readable string
+      const fecha = new Date(venta.fecha_venta).toLocaleString('es-CL');
+
+      html += '<tr>';
+      html += '<td>' + venta.id_venta + '</td>';
+      html += '<td>' + fecha + '</td>';
+      html += '<td>' + venta.medio_pago + '</td>';
+      html += '<td>' + productosTexto + '</td>';
+      html += '<td>$' + venta.total_venta + '</td>';
+      html += '</tr>';
+    }
+
+    html += '</table>';
+    setResultado(html);
+  } catch (err) {
+    setResultado('<p style="color:red;">Error de conexión: ' + err.message + '</p>');
+  }
+}
+
+// =============================================
 // INITIALIZATION
 // Load product dropdowns when the page opens.
 // Also attach the change event for auto-fill.
