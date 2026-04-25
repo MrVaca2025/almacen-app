@@ -536,6 +536,25 @@ start frontend\index.html
 - **Rojo**: error de validación, stock insuficiente, o error de conexión.
 - Después de una venta o ingreso exitoso, los dropdowns y la tabla de productos se actualizan automáticamente.
 
+**Filtro de ventas por fecha:**
+- Campos **"Desde"** y **"Hasta"** con selectores de fecha (`<input type="date">`).
+- Botón **"Filtrar ventas"** llama a `GET /api/ventas?desde=YYYY-MM-DD&hasta=YYYY-MM-DD`.
+- Si no se seleccionan fechas, muestra todas las ventas.
+- Se pueden usar solo "Desde", solo "Hasta", o ambos.
+
+**Exportar a CSV (Excel):**
+- Botón **"Exportar a Excel (CSV)"** genera un archivo `ventas.csv` desde el navegador.
+- Se exportan las ventas actualmente mostradas (todas o filtradas).
+- Primero se debe cargar el historial con "Ver historial de ventas" o "Filtrar ventas".
+- Usa separador `;` y BOM UTF-8 para compatibilidad con Excel en español.
+- Columnas: ID venta, Fecha, Medio de pago, Producto, Cantidad, Precio unitario, Subtotal, Total venta.
+- Ejemplo de CSV generado:
+  ```
+  ID venta;Fecha;Medio de pago;Producto;Cantidad;Precio unitario;Subtotal;Total venta
+  1;25-04-2026 10:30;Efectivo;Coca Cola;5;800;4000;4000
+  2;25-04-2026 11:00;Tarjeta;Pan hallulla;3;600;1800;1800
+  ```
+
 ### 11.6 Flujo de prueba recomendado
 
 Seguir estos pasos en orden para probar el sistema completo:

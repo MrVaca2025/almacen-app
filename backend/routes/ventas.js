@@ -18,19 +18,37 @@ const router = Router();
 // GET /api/ventas — List all sales with their detail lines
 // Uses JOINs to include product names and payment method.
 // Groups detail rows by sale in JavaScript.
-router.get('/', async (_req, res) => {
+// Optional query params: ?desde=YYYY-MM-DD&hasta=YYYY-MM-DD
+router.get('/', async (req, res) => {
   try {
-    const [rows] = await pool.query(
-      `SELECT v.id_venta, v.fecha_venta, v.total_venta, v.observacion,
+    const { desde, hasta } = req.query;
+
+    // Build query with optional date filter
+    let sql = `SELECT v.id_venta, v.fecha_venta, v.total_venta, v.observacion,
               mp.nombre_medio_pago AS medio_pago,
               dv.cantidad_vendida, dv.precio_unitario, dv.subtotal,
               p.nombre AS producto
        FROM venta v
        JOIN medio_pago mp ON v.id_medio_pago = mp.id_medio_pago
        JOIN detalle_venta dv ON v.id_venta = dv.id_venta
-       JOIN producto p ON dv.id_producto = p.id_producto
-       ORDER BY v.id_venta DESC, dv.id_detalle_venta`
-    );
+       JOIN producto p ON dv.id_producto = p.id_producto`;
+
+    const params = [];
+
+    if (desde && hasta) {
+      sql += ` WHERE v.fecha_venta BETWEEN ? AND ?`;
+      params.push(desde, hasta + ' 23:59:59');
+    } else if (desde) {
+      sql += ` WHERE v.fecha_venta >= ?`;
+      params.push(desde);
+    } else if (hasta) {
+      sql += ` WHERE v.fecha_venta <= ?`;
+      params.push(hasta + ' 23:59:59');
+    }
+
+    sql += ` ORDER BY v.id_venta DESC, dv.id_detalle_venta`;
+
+    const [rows] = await pool.query(sql, params);
 
     // Group detail rows by sale ID
     const ventasMap = {};

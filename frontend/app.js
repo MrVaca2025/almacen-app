@@ -11,6 +11,11 @@ const API_BASE = 'http://localhost:3000';
 let carrito = [];
 
 // =============================================
+// SALES DATA — stores last loaded ventas for CSV export
+// =============================================
+let ultimasVentas = [];
+
+// =============================================
 // HELPER FUNCTIONS
 // =============================================
 
@@ -436,16 +441,37 @@ function buildKpiCard(value, label) {
 
 // =============================================
 // F) SALES HISTORY
-// Fetches all sales from GET /api/ventas.
-// Each sale includes its detail lines (products
-// sold, quantities, prices) via SQL JOINs.
-// Displays product details inline in each row.
+// Fetches sales from GET /api/ventas.
+// Supports optional date filter via query params.
+// Stores loaded data in ultimasVentas for CSV export.
 // =============================================
 
+// verHistorialVentas — Load all sales (no filter)
 async function verHistorialVentas() {
+  await cargarVentas('');
+}
+
+// filtrarVentas — Load sales filtered by date range
+async function filtrarVentas() {
+  const desde = document.getElementById('filtro-desde').value;
+  const hasta = document.getElementById('filtro-hasta').value;
+
+  // Build query string from date inputs
+  let queryString = '';
+  const params = [];
+  if (desde) params.push('desde=' + desde);
+  if (hasta) params.push('hasta=' + hasta);
+  if (params.length > 0) queryString = '?' + params.join('&');
+
+  await cargarVentas(queryString);
+}
+
+// cargarVentas — Shared function to fetch and display sales
+// queryString can be empty or contain date filter params
+async function cargarVentas(queryString) {
   setResultado('Cargando historial de ventas...');
   try {
-    const res = await fetch(API_BASE + '/api/ventas');
+    const res = await fetch(API_BASE + '/api/ventas' + queryString);
     const data = await res.json();
 
     if (!res.ok) {
@@ -453,12 +479,15 @@ async function verHistorialVentas() {
       return;
     }
 
+    // Store data for CSV export
+    ultimasVentas = data;
+
     if (data.length === 0) {
-      setResultado('<p>No hay ventas registradas.</p>');
+      setResultado('<p>No hay ventas en el rango seleccionado.</p>');
       return;
     }
 
-    let html = '<h2>Historial de Ventas</h2>';
+    let html = '<h2>Historial de Ventas (' + data.length + ')</h2>';
     html += '<table>';
     html += '<tr><th>ID</th><th>Fecha</th><th>Medio de pago</th><th>Productos vendidos</th><th>Total</th></tr>';
 
@@ -485,6 +514,63 @@ async function verHistorialVentas() {
   } catch (err) {
     setResultado('<p style="color:red;">Error de conexión: ' + err.message + '</p>');
   }
+}
+
+// =============================================
+// G) CSV EXPORT
+// Generates a CSV file from the last loaded
+// sales data (ultimasVentas) and triggers a
+// browser download. One row per detail line.
+// =============================================
+
+function exportarCSV() {
+  if (ultimasVentas.length === 0) {
+    alert('No hay ventas para exportar. Primero cargue el historial de ventas.');
+    return;
+  }
+
+  // CSV header row
+  const headers = ['ID venta', 'Fecha', 'Medio de pago', 'Producto', 'Cantidad', 'Precio unitario', 'Subtotal', 'Total venta'];
+
+  // Build CSV rows — one row per detail line
+  const rows = [];
+  for (const venta of ultimasVentas) {
+    const fecha = new Date(venta.fecha_venta).toLocaleString('es-CL');
+    for (const d of venta.detalles) {
+      rows.push([
+        venta.id_venta,
+        fecha,
+        venta.medio_pago,
+        d.producto,
+        d.cantidad_vendida,
+        d.precio_unitario,
+        d.subtotal,
+        venta.total_venta
+      ]);
+    }
+  }
+
+  // Convert to CSV string with proper escaping
+  let csv = headers.join(';') + '\n';
+  for (const row of rows) {
+    csv += row.map(function (val) {
+      // Wrap in quotes if value contains semicolons or quotes
+      const str = String(val);
+      if (str.includes(';') || str.includes('"') || str.includes('\n')) {
+        return '"' + str.replace(/"/g, '""') + '"';
+      }
+      return str;
+    }).join(';') + '\n';
+  }
+
+  // Trigger download — BOM for Excel UTF-8 compatibility
+  const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = 'ventas.csv';
+  link.click();
+  URL.revokeObjectURL(url);
 }
 
 // =============================================

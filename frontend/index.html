@@ -22,6 +22,18 @@
     </nav>
 
     <!-- ===================== -->
+    <!-- SALES FILTER          -->
+    <!-- ===================== -->
+    <div id="filtro-ventas" class="filtro-ventas">
+      <label for="filtro-desde">Desde:</label>
+      <input type="date" id="filtro-desde">
+      <label for="filtro-hasta">Hasta:</label>
+      <input type="date" id="filtro-hasta">
+      <button onclick="filtrarVentas()">Filtrar ventas</button>
+      <button class="btn-csv" onclick="exportarCSV()">Exportar a Excel (CSV)</button>
+    </div>
+
+    <!-- ===================== -->
     <!-- RESULTS AREA          -->
     <!-- ===================== -->
     <div id="resultado" class="resultado"></div>
