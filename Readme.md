@@ -610,8 +610,60 @@ Seguir estos pasos en orden para probar el sistema completo:
 | Productos | Se cargan automáticamente en los dropdowns |
 | Categorías | 1 = Bebidas, 2 = Snacks, 3 = Alimentos, 4 = Lácteos, ... |
 
+### 11.8 localStorage (persistencia local)
+
+El sistema guarda el estado del usuario en `localStorage` para sobrevivir recargas de página:
+
+| Clave localStorage | Dato persistido |
+|---|---|
+| `almacen_carrito` | Carrito de ventas (array JSON) |
+| `almacen_carritoIngreso` | Carrito de ingreso (array JSON) |
+| `almacen_filtroDesde` | Filtro "Desde" del historial |
+| `almacen_filtroHasta` | Filtro "Hasta" del historial |
+| `almacen_medioPago` | Último medio de pago seleccionado |
+| `almacen_operador` | Nombre del operador |
+
+**Comportamiento al recargar:**
+- Los carritos se restauran con sus productos.
+- Los filtros de fecha se restauran.
+- El medio de pago se restaura.
+- El nombre del operador se restaura.
+
+**Para probar:**
+1. Agregar productos al carrito de ventas.
+2. Escribir un nombre de operador.
+3. Seleccionar un medio de pago.
+4. Recargar la página (F5).
+5. Verificar que todo se mantiene.
+
+**Para limpiar:** Abrir la consola del navegador (F12) y ejecutar `localStorage.clear()`.
+
+### 11.9 Comprobante de venta (recibo interno)
+
+Después de registrar una venta exitosa, se muestra automáticamente un modal con el comprobante:
+
+- **Venta ID** — identificador de la venta.
+- **Fecha** — fecha y hora de registro.
+- **Medio de pago** — efectivo, tarjeta o transferencia.
+- **Operador** — nombre ingresado en el campo "Operador" (o "—" si está vacío).
+- **Tabla de productos** — nombre, cantidad, precio unitario y subtotal por producto.
+- **Total** — monto total de la venta.
+
+**Botones:**
+- **"Imprimir comprobante"** — abre el diálogo de impresión del navegador (solo se imprime el recibo).
+- **"Cerrar"** — cierra el modal.
+
+Este comprobante es **solo interno** y no tiene validez como boleta o factura.
+
+### 11.10 Campo Operador
+
+En la parte superior de la página hay un campo de texto **"Operador"** para ingresar el nombre de quien opera el sistema. Este nombre:
+- Se guarda en localStorage automáticamente.
+- Se muestra en el comprobante de venta.
+- No requiere login ni contraseña.
+
 ## 12. Próximos pasos
 
 1. Agregar formulario para crear productos nuevos desde el frontend.
-2. Mejorar diseño visual del frontend.
+2. Implementar login básico para operadores.
 3. Probar flujo completo con múltiples usuarios.

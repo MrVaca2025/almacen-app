@@ -29,6 +29,62 @@ let chartVentasDia = null;
 let chartProductos = null;
 
 // =============================================
+// LOCALSTORAGE PERSISTENCE
+// Save and restore carts, filters, payment method,
+// and operator name across page reloads.
+// =============================================
+
+const LS_KEYS = {
+  CARRITO: 'almacen_carrito',
+  CARRITO_INGRESO: 'almacen_carritoIngreso',
+  FILTRO_DESDE: 'almacen_filtroDesde',
+  FILTRO_HASTA: 'almacen_filtroHasta',
+  MEDIO_PAGO: 'almacen_medioPago',
+  OPERADOR: 'almacen_operador'
+};
+
+function saveState() {
+  try {
+    localStorage.setItem(LS_KEYS.CARRITO, JSON.stringify(carrito));
+    localStorage.setItem(LS_KEYS.CARRITO_INGRESO, JSON.stringify(carritoIngreso));
+    localStorage.setItem(LS_KEYS.FILTRO_DESDE, document.getElementById('filtro-desde').value);
+    localStorage.setItem(LS_KEYS.FILTRO_HASTA, document.getElementById('filtro-hasta').value);
+    localStorage.setItem(LS_KEYS.MEDIO_PAGO, document.getElementById('venta-medio-pago').value);
+    localStorage.setItem(LS_KEYS.OPERADOR, document.getElementById('operador-nombre').value);
+  } catch (e) {
+    // localStorage not available — ignore
+  }
+}
+
+function restoreState() {
+  try {
+    const savedCarrito = localStorage.getItem(LS_KEYS.CARRITO);
+    if (savedCarrito) carrito = JSON.parse(savedCarrito);
+
+    const savedIngresoCart = localStorage.getItem(LS_KEYS.CARRITO_INGRESO);
+    if (savedIngresoCart) carritoIngreso = JSON.parse(savedIngresoCart);
+
+    const desde = localStorage.getItem(LS_KEYS.FILTRO_DESDE);
+    if (desde) document.getElementById('filtro-desde').value = desde;
+
+    const hasta = localStorage.getItem(LS_KEYS.FILTRO_HASTA);
+    if (hasta) document.getElementById('filtro-hasta').value = hasta;
+
+    const medioPago = localStorage.getItem(LS_KEYS.MEDIO_PAGO);
+    if (medioPago) document.getElementById('venta-medio-pago').value = medioPago;
+
+    const operador = localStorage.getItem(LS_KEYS.OPERADOR);
+    if (operador) document.getElementById('operador-nombre').value = operador;
+
+    // Render restored carts
+    renderCarrito();
+    renderIngresoCart();
+  } catch (e) {
+    // localStorage not available — ignore
+  }
+}
+
+// =============================================
 // HELPER FUNCTIONS
 // =============================================
 
@@ -36,6 +92,7 @@ function showMessage(elementId, text, type) {
   const el = document.getElementById(elementId);
   el.textContent = text;
   el.className = 'msg ' + type + ' msg-animate';
+  el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
 
 function clearMessage(elementId) {
@@ -70,10 +127,14 @@ function getCleanName(fullText) {
   return parts.length > 1 ? parts[1].split(' (')[0] : fullText;
 }
 
+// Get payment method display text from its ID
+function getMedioPagoText(id) {
+  var names = { '1': 'Efectivo', '2': 'Tarjeta', '3': 'Transferencia' };
+  return names[String(id)] || 'Medio #' + id;
+}
+
 // =============================================
 // STOCK ALERT BANNER
-// Shows count of critical and bajo-stock products.
-// Clicking scrolls to bajo-stock table.
 // =============================================
 
 async function updateStockAlert() {
@@ -108,7 +169,7 @@ async function updateStockAlert() {
       banner.style.display = 'none';
     }
   } catch (err) {
-    // Silently ignore — banner is non-essential
+    // Silently ignore
   }
 }
 
@@ -232,7 +293,7 @@ async function verBajoStock() {
       return;
     }
     if (data.length === 0) {
-      setResultado('<p>No hay productos bajo stock mínimo. ✅</p>');
+      setResultado('<p>No hay productos bajo stock mínimo.</p>');
       return;
     }
 
@@ -251,8 +312,6 @@ async function verBajoStock() {
     }
     html += '</table>';
     setResultado(html);
-
-    // Scroll to results
     document.getElementById('resultado').scrollIntoView({ behavior: 'smooth' });
   } catch (err) {
     setResultado('<p class="error">Error de conexión: ' + err.message + '</p>');
@@ -304,6 +363,7 @@ function agregarAlCarrito() {
   document.getElementById('venta-precio').value = '';
   checkVentaFields();
   renderCarrito();
+  saveState();
 }
 
 function renderCarrito() {
@@ -336,8 +396,12 @@ function renderCarrito() {
 }
 
 function quitarDelCarrito(index) {
+  var item = carrito[index];
+  var name = getCleanName(item.nombre);
+  if (!confirm('¿Quitar "' + name + '" del carrito?')) return;
   carrito.splice(index, 1);
   renderCarrito();
+  saveState();
 }
 
 async function registrarVenta() {
@@ -347,9 +411,18 @@ async function registrarVenta() {
   if (!id_medio_pago) { showMessage('msg-venta', 'Selecciona un medio de pago', 'error'); return; }
   if (carrito.length === 0) { showMessage('msg-venta', 'El carrito está vacío. Agrega productos primero.', 'error'); return; }
 
+  // Loading state
+  var btnVenta = document.getElementById('btn-registrar-venta');
+  var btnOrigText = btnVenta.textContent;
+  btnVenta.textContent = 'Registrando...';
+  btnVenta.disabled = true;
+
   const detalles = carrito.map(function (item) {
     return { id_producto: item.id_producto, cantidad_vendida: item.cantidad_vendida, precio_unitario: item.precio_unitario };
   });
+
+  // Keep cart items for the receipt before clearing
+  var carritoParaRecibo = carrito.slice();
 
   try {
     const res = await fetch(API_BASE + '/api/ventas', {
@@ -361,9 +434,12 @@ async function registrarVenta() {
 
     if (res.ok) {
       showMessage('msg-venta', '✔ Venta registrada correctamente. ID: ' + data.id_venta + ' | Total: ' + formatCLP(data.total_venta), 'success');
+      // Show receipt modal
+      mostrarRecibo(data.id_venta, id_medio_pago, data.total_venta, carritoParaRecibo);
       carrito = [];
       renderCarrito();
       document.getElementById('venta-medio-pago').value = '';
+      saveState();
       cargarDropdownProductos();
       updateStockAlert();
     } else {
@@ -371,13 +447,70 @@ async function registrarVenta() {
     }
   } catch (err) {
     showMessage('msg-venta', 'Error de conexión: ' + err.message, 'error');
+  } finally {
+    btnVenta.textContent = btnOrigText;
+    btnVenta.disabled = false;
   }
 }
 
 // =============================================
+// RECEIPT MODAL
+// Shows sale details after successful registration.
+// =============================================
+
+function mostrarRecibo(idVenta, idMedioPago, totalVenta, items) {
+  var operador = document.getElementById('operador-nombre').value || '—';
+  var fecha = new Date().toLocaleString('es-CL');
+  var medioPago = getMedioPagoText(idMedioPago);
+
+  var html = '<div class="receipt">';
+  html += '<h2>🧾 Comprobante de Venta</h2>';
+  html += '<div class="receipt-header">';
+  html += '<p><strong>Venta ID:</strong> ' + idVenta + '</p>';
+  html += '<p><strong>Fecha:</strong> ' + fecha + '</p>';
+  html += '<p><strong>Medio de pago:</strong> ' + medioPago + '</p>';
+  html += '<p><strong>Operador:</strong> ' + operador + '</p>';
+  html += '</div>';
+
+  html += '<table class="receipt-table">';
+  html += '<thead><tr><th>Producto</th><th>Cant.</th><th>P. Unit.</th><th>Subtotal</th></tr></thead>';
+  html += '<tbody>';
+
+  var total = 0;
+  for (var i = 0; i < items.length; i++) {
+    var item = items[i];
+    var subtotal = item.cantidad_vendida * item.precio_unitario;
+    total += subtotal;
+    var cleanName = getCleanName(item.nombre);
+    html += '<tr>';
+    html += '<td>' + cleanName + '</td>';
+    html += '<td>' + item.cantidad_vendida + '</td>';
+    html += '<td>' + formatCLP(item.precio_unitario) + '</td>';
+    html += '<td>' + formatCLP(subtotal) + '</td>';
+    html += '</tr>';
+  }
+
+  html += '</tbody>';
+  html += '<tfoot><tr><td colspan="3"><strong>Total</strong></td><td><strong>' + formatCLP(totalVenta) + '</strong></td></tr></tfoot>';
+  html += '</table>';
+  html += '<p class="receipt-footer">Comprobante interno — No válido como boleta</p>';
+  html += '</div>';
+
+  document.getElementById('receipt-body').innerHTML = html;
+  document.getElementById('receipt-modal').style.display = 'flex';
+}
+
+function cerrarRecibo(event) {
+  if (event && event.target && event.target.id !== 'receipt-modal') return;
+  document.getElementById('receipt-modal').style.display = 'none';
+}
+
+function imprimirRecibo() {
+  window.print();
+}
+
+// =============================================
 // D) INGRESO CART (multi-product)
-// Similar to sale cart: add items, merge duplicates,
-// then submit all at once via POST /api/ingresos.
 // =============================================
 
 function agregarAlIngresoCart() {
@@ -393,7 +526,6 @@ function agregarAlIngresoCart() {
   if (!cantidad || cantidad <= 0) { showMessage('msg-ingreso', 'Cantidad inválida', 'error'); return; }
   if (precio < 0) { showMessage('msg-ingreso', 'El precio no puede ser negativo', 'error'); return; }
 
-  // Merge if same product already in ingreso cart
   const existente = carritoIngreso.find(function (item) { return item.id_producto === id_producto; });
   if (existente) {
     existente.cantidad += cantidad;
@@ -404,12 +536,12 @@ function agregarAlIngresoCart() {
     showMessage('msg-ingreso', 'Producto agregado al ingreso', 'success');
   }
 
-  // Reset product/quantity/price fields but keep proveedor
   document.getElementById('ingreso-producto').value = '';
   document.getElementById('ingreso-cantidad').value = '';
   document.getElementById('ingreso-precio').value = '';
   checkIngresoFields();
   renderIngresoCart();
+  saveState();
 }
 
 function renderIngresoCart() {
@@ -442,8 +574,12 @@ function renderIngresoCart() {
 }
 
 function quitarDelIngresoCart(index) {
+  var item = carritoIngreso[index];
+  var name = getCleanName(item.nombre);
+  if (!confirm('¿Quitar "' + name + '" del carrito de ingreso?')) return;
   carritoIngreso.splice(index, 1);
   renderIngresoCart();
+  saveState();
 }
 
 async function registrarIngreso() {
@@ -458,6 +594,12 @@ async function registrarIngreso() {
     showMessage('msg-ingreso', 'El carrito de ingreso está vacío. Agrega productos primero.', 'error');
     return;
   }
+
+  // Loading state
+  var btnIngreso = document.getElementById('btn-registrar-ingreso');
+  var btnOrigText = btnIngreso.textContent;
+  btnIngreso.textContent = 'Registrando...';
+  btnIngreso.disabled = true;
 
   const detalles = carritoIngreso.map(function (item) {
     return {
@@ -480,9 +622,9 @@ async function registrarIngreso() {
       showMessage('msg-ingreso', '✔ Ingreso registrado correctamente. ID: ' + data.id_ingreso, 'success');
       carritoIngreso = [];
       renderIngresoCart();
-      // Reset proveedor field too
       document.getElementById('ingreso-interlocutor').value = '';
       checkIngresoFields();
+      saveState();
       cargarDropdownProductos();
       updateStockAlert();
     } else {
@@ -490,6 +632,9 @@ async function registrarIngreso() {
     }
   } catch (err) {
     showMessage('msg-ingreso', 'Error de conexión: ' + err.message, 'error');
+  } finally {
+    btnIngreso.textContent = btnOrigText;
+    btnIngreso.disabled = false;
   }
 }
 
@@ -572,7 +717,6 @@ function renderCharts(ventas) {
   if (chartProductos) { chartProductos.destroy(); chartProductos = null; }
 
   // ---- Chart 1: Ventas por día (line chart) ----
-  // Group by ISO date for proper sorting
   const ventasPorDia = {};
   for (const v of ventas) {
     const isoDate = v.fecha_venta.substring(0, 10);
@@ -580,7 +724,6 @@ function renderCharts(ventas) {
     ventasPorDia[isoDate] += Number(v.total_venta);
   }
 
-  // Sort dates ascending
   const sortedDates = Object.keys(ventasPorDia).sort();
   const fechasDisplay = sortedDates.map(function (d) {
     const parts = d.split('-');
@@ -696,6 +839,7 @@ async function verHistorialVentas() {
 async function filtrarVentas() {
   const desde = document.getElementById('filtro-desde').value;
   const hasta = document.getElementById('filtro-hasta').value;
+  saveState();
   let queryString = '';
   const params = [];
   if (desde) params.push('desde=' + desde);
@@ -794,6 +938,7 @@ function exportarCSV() {
 // =============================================
 
 document.addEventListener('DOMContentLoaded', function () {
+  restoreState();
   cargarDropdownProductos();
   updateStockAlert();
 
@@ -807,4 +952,10 @@ document.addEventListener('DOMContentLoaded', function () {
   document.getElementById('ingreso-producto').addEventListener('change', checkIngresoFields);
   document.getElementById('ingreso-cantidad').addEventListener('input', checkIngresoFields);
   document.getElementById('ingreso-precio').addEventListener('input', checkIngresoFields);
+
+  // Save operator name and payment method on change
+  document.getElementById('operador-nombre').addEventListener('input', saveState);
+  document.getElementById('venta-medio-pago').addEventListener('change', saveState);
+  document.getElementById('filtro-desde').addEventListener('change', saveState);
+  document.getElementById('filtro-hasta').addEventListener('change', saveState);
 });

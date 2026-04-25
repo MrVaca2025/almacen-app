@@ -17,6 +17,10 @@
     <header class="app-header">
       <h1>📦 Sistema de Gestión de Almacén</h1>
       <p class="subtitle">Control de stock, ventas e ingresos</p>
+      <div class="operador-bar">
+        <label for="operador-nombre">👤 Operador:</label>
+        <input type="text" id="operador-nombre" placeholder="Nombre del operador">
+      </div>
     </header>
 
     <!-- ===================== -->
@@ -97,7 +101,7 @@
               <tr><td colspan="3"><strong>Total</strong></td><td id="carrito-total"><strong>$0</strong></td><td></td></tr>
             </tfoot>
           </table>
-          <button type="button" onclick="registrarVenta()">Registrar venta</button>
+          <button type="button" id="btn-registrar-venta" onclick="registrarVenta()">Registrar venta</button>
         </div>
 
         <div id="msg-venta" class="msg"></div>
@@ -143,6 +147,19 @@
         <div id="msg-ingreso" class="msg"></div>
       </div>
 
+    </div>
+  </div>
+
+  <!-- ===================== -->
+  <!-- RECEIPT MODAL         -->
+  <!-- ===================== -->
+  <div id="receipt-modal" class="modal-overlay" style="display:none;" onclick="cerrarRecibo(event)">
+    <div class="modal-content" onclick="event.stopPropagation()">
+      <div id="receipt-body"></div>
+      <div class="modal-actions">
+        <button class="btn-modal btn-modal-print" onclick="imprimirRecibo()">🖨️ Imprimir comprobante</button>
+        <button class="btn-modal btn-modal-close" onclick="cerrarRecibo()">Cerrar</button>
+      </div>
     </div>
   </div>
 
