@@ -109,19 +109,29 @@ async function cargarProductos() {
       return;
     }
 
-    // Build HTML table with product data
+    // Build HTML table with product data and badges
     let html = '<h2>Productos</h2>';
     html += '<table>';
-    html += '<tr><th>ID</th><th>Nombre</th><th>Precio venta</th><th>Stock actual</th><th>Stock mínimo</th><th>Categoría</th><th>Activo</th></tr>';
+    html += '<tr><th>ID</th><th>Nombre</th><th>Precio venta</th><th>Stock actual</th><th>Stock mínimo</th><th>Categoría</th><th>Estado</th></tr>';
     for (const p of data) {
+      // Badge for stock level
+      const stockBajo = p.stock_actual <= p.stock_minimo;
+      const stockBadge = stockBajo
+        ? '<span class="badge badge-danger">Bajo</span>'
+        : '<span class="badge badge-success">OK</span>';
+      // Badge for active status
+      const activoBadge = p.activo
+        ? '<span class="badge badge-success">Activo</span>'
+        : '<span class="badge badge-warning">Inactivo</span>';
+
       html += '<tr>';
       html += '<td>' + p.id_producto + '</td>';
       html += '<td>' + p.nombre + '</td>';
       html += '<td>$' + p.precio_venta + '</td>';
-      html += '<td>' + p.stock_actual + '</td>';
+      html += '<td>' + p.stock_actual + ' ' + stockBadge + '</td>';
       html += '<td>' + p.stock_minimo + '</td>';
       html += '<td>' + p.categoria + '</td>';
-      html += '<td>' + (p.activo ? 'Sí' : 'No') + '</td>';
+      html += '<td>' + activoBadge + '</td>';
       html += '</tr>';
     }
     html += '</table>';
@@ -159,9 +169,9 @@ async function verBajoStock() {
     for (const p of data) {
       html += '<tr>';
       html += '<td>' + p.nombre + '</td>';
-      html += '<td>' + p.stock_actual + '</td>';
+      html += '<td>' + p.stock_actual + ' <span class="badge badge-danger">Bajo</span></td>';
       html += '<td>' + p.stock_minimo + '</td>';
-      html += '<td>' + p.deficit + '</td>';
+      html += '<td><span class="badge badge-warning">' + p.deficit + '</span></td>';
       html += '</tr>';
     }
     html += '</table>';

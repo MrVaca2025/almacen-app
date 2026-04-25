@@ -9,7 +9,14 @@
 <body>
 
   <div class="container">
-    <h1>Sistema de Gestión de Almacén</h1>
+
+    <!-- ===================== -->
+    <!-- HEADER                -->
+    <!-- ===================== -->
+    <header class="app-header">
+      <h1>Sistema de Gestión de Almacén</h1>
+      <p class="subtitle">Control de stock, ventas e ingresos</p>
+    </header>
 
     <!-- ===================== -->
     <!-- NAVIGATION BUTTONS    -->
@@ -24,7 +31,7 @@
     <!-- ===================== -->
     <!-- SALES FILTER          -->
     <!-- ===================== -->
-    <div id="filtro-ventas" class="filtro-ventas">
+    <div id="filtro-ventas" class="filtro-ventas card">
       <label for="filtro-desde">Desde:</label>
       <input type="date" id="filtro-desde">
       <label for="filtro-hasta">Hasta:</label>
@@ -36,7 +43,7 @@
     <!-- ===================== -->
     <!-- RESULTS AREA          -->
     <!-- ===================== -->
-    <div id="resultado" class="resultado"></div>
+    <div id="resultado" class="resultado card"></div>
 
     <!-- ===================== -->
     <!-- FORMS SECTION         -->
@@ -46,7 +53,7 @@
       <!-- ========================= -->
       <!-- SALE CART (multi-product)  -->
       <!-- ========================= -->
-      <div class="form-card">
+      <div class="form-card card">
         <h2>Registrar Venta</h2>
 
         <!-- Payment method -->
@@ -73,7 +80,7 @@
         <button type="button" class="btn-secondary" onclick="agregarAlCarrito()">Agregar al carrito</button>
 
         <!-- Cart table -->
-        <div id="carrito-container" style="display:none; margin-top:12px;">
+        <div id="carrito-container" style="display:none; margin-top:16px;">
           <h3>Carrito</h3>
           <table id="carrito-tabla">
             <thead>
@@ -93,7 +100,7 @@
       <!-- ========================= -->
       <!-- FORM: Registrar Ingreso   -->
       <!-- ========================= -->
-      <div class="form-card">
+      <div class="form-card card">
         <h2>Registrar Ingreso</h2>
         <form id="form-ingreso" onsubmit="registrarIngreso(event)">
           <label for="ingreso-interlocutor">Proveedor (ID)</label>
