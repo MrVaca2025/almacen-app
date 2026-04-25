@@ -19,12 +19,27 @@ router.post('/', async (req, res) => {
   try {
     const { fecha_ingreso, observacion, id_interlocutor, detalles } = req.body;
 
-    // Validate required fields
+    // Validate required header fields
     if (!id_interlocutor) {
       return res.status(400).json({ error: 'El campo id_interlocutor es obligatorio (proveedor)' });
     }
     if (!detalles || !detalles.length) {
       return res.status(400).json({ error: 'Debe incluir al menos un detalle de ingreso' });
+    }
+
+    // Validate each detail line has required fields
+    for (let i = 0; i < detalles.length; i++) {
+      const d = detalles[i];
+      if (d.id_producto == null || d.cantidad_ingresada == null) {
+        return res.status(400).json({
+          error: `Detalle ${i + 1}: los campos id_producto y cantidad_ingresada son obligatorios`
+        });
+      }
+      if (isNaN(Number(d.cantidad_ingresada))) {
+        return res.status(400).json({
+          error: `Detalle ${i + 1}: cantidad_ingresada debe ser un valor numérico`
+        });
+      }
     }
 
     conn = await pool.getConnection();
@@ -48,8 +63,8 @@ router.post('/', async (req, res) => {
            (cantidad_ingresada, precio_compra, estado_recepcion, motivo_rechazo, id_ingreso, id_producto)
          VALUES (?, ?, ?, ?, ?, ?)`,
         [
-          detalle.cantidad_ingresada,
-          detalle.precio_compra != null ? detalle.precio_compra : null,
+          Number(detalle.cantidad_ingresada),
+          detalle.precio_compra != null ? Number(detalle.precio_compra) : null,
           detalle.estado_recepcion || 'aceptado',
           detalle.motivo_rechazo || null,
           id_ingreso,

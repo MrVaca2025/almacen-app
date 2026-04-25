@@ -21,7 +21,7 @@ router.post('/', async (req, res) => {
   try {
     const { fecha_venta, observacion, id_interlocutor, id_medio_pago, detalles } = req.body;
 
-    // Validate required fields
+    // Validate required header fields
     if (!id_medio_pago) {
       return res.status(400).json({ error: 'El campo id_medio_pago es obligatorio' });
     }
@@ -29,10 +29,25 @@ router.post('/', async (req, res) => {
       return res.status(400).json({ error: 'Debe incluir al menos un detalle de venta' });
     }
 
-    // Calculate total from detail lines
+    // Validate each detail line has required numeric fields
+    for (let i = 0; i < detalles.length; i++) {
+      const d = detalles[i];
+      if (d.id_producto == null || d.cantidad_vendida == null || d.precio_unitario == null) {
+        return res.status(400).json({
+          error: `Detalle ${i + 1}: los campos id_producto, cantidad_vendida y precio_unitario son obligatorios`
+        });
+      }
+      if (isNaN(Number(d.cantidad_vendida)) || isNaN(Number(d.precio_unitario))) {
+        return res.status(400).json({
+          error: `Detalle ${i + 1}: cantidad_vendida y precio_unitario deben ser valores numéricos`
+        });
+      }
+    }
+
+    // Calculate total from detail lines (safe after validation)
     let total_venta = 0;
     for (const detalle of detalles) {
-      total_venta += detalle.cantidad_vendida * detalle.precio_unitario;
+      total_venta += Number(detalle.cantidad_vendida) * Number(detalle.precio_unitario);
     }
 
     conn = await pool.getConnection();
@@ -52,12 +67,14 @@ router.post('/', async (req, res) => {
     // decreases stock_actual. If stock would go negative, the trigger
     // "trg_no_stock_negativo" blocks the UPDATE with SQLSTATE 45000.
     for (const detalle of detalles) {
-      const subtotal = detalle.cantidad_vendida * detalle.precio_unitario;
+      const cantidad = Number(detalle.cantidad_vendida);
+      const precio = Number(detalle.precio_unitario);
+      const subtotal = cantidad * precio;
       await conn.query(
         `INSERT INTO detalle_venta
            (cantidad_vendida, precio_unitario, subtotal, id_venta, id_producto)
          VALUES (?, ?, ?, ?, ?)`,
-        [detalle.cantidad_vendida, detalle.precio_unitario, subtotal, id_venta, detalle.id_producto]
+        [cantidad, precio, subtotal, id_venta, detalle.id_producto]
       );
     }
 
