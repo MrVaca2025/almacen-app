@@ -49,7 +49,7 @@ router.post('/', async (req, res) => {
          VALUES (?, ?, ?, ?, ?, ?)`,
         [
           detalle.cantidad_ingresada,
-          detalle.precio_compra || null,
+          detalle.precio_compra != null ? detalle.precio_compra : null,
           detalle.estado_recepcion || 'aceptado',
           detalle.motivo_rechazo || null,
           id_ingreso,
@@ -62,7 +62,7 @@ router.post('/', async (req, res) => {
     res.status(201).json({ id_ingreso, message: 'Ingreso registrado correctamente' });
   } catch (err) {
     if (conn) await conn.rollback();
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: err.message || err.code || 'Error interno del servidor' });
   } finally {
     if (conn) conn.release();
   }

@@ -60,7 +60,7 @@ router.get('/', async (_req, res) => {
       mas_vendidos: masVendidos
     });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: err.message || err.code || 'Error interno del servidor' });
   }
 });
 

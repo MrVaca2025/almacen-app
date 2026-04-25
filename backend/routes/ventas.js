@@ -68,10 +68,10 @@ router.post('/', async (req, res) => {
 
     // SQLSTATE 45000 = custom error from trigger (insufficient stock)
     if (err.sqlState === '45000') {
-      return res.status(400).json({ error: 'Stock insuficiente: ' + err.message });
+      return res.status(400).json({ error: 'Stock insuficiente: ' + (err.message || 'No se puede vender más de lo disponible') });
     }
 
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: err.message || err.code || 'Error interno del servidor' });
   } finally {
     if (conn) conn.release();
   }

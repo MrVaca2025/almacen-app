@@ -18,7 +18,7 @@ router.get('/', async (_req, res) => {
     );
     res.json(rows);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: err.message || err.code || 'Error interno del servidor' });
   }
 });
 
@@ -35,7 +35,7 @@ router.get('/bajo-stock', async (_req, res) => {
     );
     res.json(rows);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: err.message || err.code || 'Error interno del servidor' });
   }
 });
 
@@ -66,7 +66,7 @@ router.post('/', async (req, res) => {
 
     res.status(201).json({ id_producto: result.insertId, message: 'Producto creado' });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: err.message || err.code || 'Error interno del servidor' });
   }
 });
 

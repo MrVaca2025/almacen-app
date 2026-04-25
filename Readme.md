@@ -271,7 +271,207 @@ curl http://localhost:3000/api/productos/bajo-stock
 curl http://localhost:3000/api/dashboard
 ```
 
-> **Nota para Windows:** Los ejemplos usan `^` como carácter de continuación de línea (CMD). En PowerShell, usar `` ` `` en su lugar. En Git Bash, usar `\`.
+> **Nota para Windows:** Los ejemplos de la sección anterior usan `^` (CMD). En PowerShell, usar `` ` `` o escribir el comando en una sola línea.
+
+### 10.7 Guía de pruebas con PowerShell (Windows)
+
+Abrir PowerShell y ejecutar cada comando. Se incluye la respuesta esperada.
+
+**Paso 1 — Verificar que el servidor está corriendo:**
+
+```powershell
+Invoke-RestMethod http://localhost:3000/api/health
+```
+
+Respuesta esperada:
+
+```
+status timestamp
+------ ---------
+OK     2025-04-25T12:00:00.000Z
+```
+
+**Paso 2 — Listar productos:**
+
+```powershell
+Invoke-RestMethod http://localhost:3000/api/productos
+```
+
+Respuesta esperada (si ejecutaste `insertar_producto.sql`):
+
+```
+id_producto : 1
+nombre      : Coca Cola 350ml
+precio_venta: 800.00
+stock_actual: 0
+...
+```
+
+**Paso 3 — Crear un producto:**
+
+```powershell
+$body = @{
+    nombre = "Galletas"
+    descripcion = "Galletas de chocolate"
+    precio_venta = 500
+    stock_minimo = 10
+    unidad_venta = "unidad"
+    unidad_compra = "caja"
+    factor_conversion = 12
+    activo = $true
+    id_categoria = 2
+} | ConvertTo-Json
+
+Invoke-RestMethod -Method Post -Uri http://localhost:3000/api/productos -ContentType "application/json" -Body $body
+```
+
+Respuesta esperada:
+
+```
+id_producto message
+----------- -------
+4           Producto creado
+```
+
+**Paso 4 — Registrar un ingreso (stock aumenta automáticamente):**
+
+```powershell
+$body = @{
+    id_interlocutor = 2
+    observacion = "Compra semanal"
+    detalles = @(
+        @{
+            id_producto = 1
+            cantidad_ingresada = 48
+            precio_compra = 500
+            estado_recepcion = "aceptado"
+        }
+    )
+} | ConvertTo-Json -Depth 3
+
+Invoke-RestMethod -Method Post -Uri http://localhost:3000/api/ingresos -ContentType "application/json" -Body $body
+```
+
+Respuesta esperada:
+
+```
+id_ingreso message
+---------- -------
+1          Ingreso registrado correctamente
+```
+
+> Verificar que el stock aumentó: `Invoke-RestMethod http://localhost:3000/api/productos`
+> El producto 1 (Coca Cola) debería tener `stock_actual = 48`.
+
+**Paso 5 — Registrar una venta (stock disminuye automáticamente):**
+
+```powershell
+$body = @{
+    id_medio_pago = 1
+    observacion = "Venta al contado"
+    detalles = @(
+        @{
+            id_producto = 1
+            cantidad_vendida = 2
+            precio_unitario = 800
+        }
+    )
+} | ConvertTo-Json -Depth 3
+
+Invoke-RestMethod -Method Post -Uri http://localhost:3000/api/ventas -ContentType "application/json" -Body $body
+```
+
+Respuesta esperada:
+
+```
+id_venta total_venta message
+-------- ----------- -------
+1        1600        Venta registrada correctamente
+```
+
+> Verificar que el stock bajó: `Invoke-RestMethod http://localhost:3000/api/productos`
+> El producto 1 debería tener `stock_actual = 46`.
+
+**Paso 6 — Probar error de stock insuficiente:**
+
+```powershell
+$body = @{
+    id_medio_pago = 1
+    detalles = @(
+        @{
+            id_producto = 1
+            cantidad_vendida = 9999
+            precio_unitario = 800
+        }
+    )
+} | ConvertTo-Json -Depth 3
+
+try {
+    Invoke-RestMethod -Method Post -Uri http://localhost:3000/api/ventas -ContentType "application/json" -Body $body
+} catch {
+    $_.ErrorDetails.Message
+}
+```
+
+Respuesta esperada (error 400):
+
+```json
+{"error":"Stock insuficiente: El stock no puede ser negativo"}
+```
+
+**Paso 7 — Consultar productos bajo stock:**
+
+```powershell
+Invoke-RestMethod http://localhost:3000/api/productos/bajo-stock
+```
+
+**Paso 8 — Consultar dashboard:**
+
+```powershell
+Invoke-RestMethod http://localhost:3000/api/dashboard
+```
+
+Respuesta esperada:
+
+```
+kpis                : @{productos_activos=3; total_ventas=1; ...}
+ventas              : @{ventas_totales=1600; numero_ventas=1; ticket_promedio=1600}
+productos_bajo_stock: {...}
+mas_vendidos        : {...}
+```
+
+### 10.8 Errores comunes y soluciones
+
+| Error | Causa | Solución |
+|-------|-------|----------|
+| `ECONNREFUSED` | MySQL no está corriendo o el puerto es incorrecto | Verificar que MySQL está activo: `net start MySQL80` (Windows). Revisar `DB_PORT` en `.env` |
+| `ER_ACCESS_DENIED_ERROR` | Usuario o contraseña incorrectos | Revisar `DB_USER` y `DB_PASSWORD` en `.env` |
+| `ER_BAD_DB_ERROR` | La base de datos `almacen_db` no existe | Ejecutar `source database/crear_db.sql` en MySQL |
+| `ER_NO_SUCH_TABLE` | Las tablas no fueron creadas | Ejecutar todos los scripts SQL en orden (ver sección 10.1) |
+| `EADDRINUSE` | El puerto 3000 ya está en uso | Cambiar `PORT` en `.env` a otro valor (ej: 3001) o cerrar el proceso que usa el puerto: `netstat -ano \| findstr :3000` |
+| `MODULE_NOT_FOUND` | Dependencias no instaladas | Ejecutar `npm install` dentro de la carpeta `backend/` |
+| `Error: Cannot find module 'dotenv'` | Falta ejecutar `npm install` | Ejecutar `cd backend && npm install` |
+| `Faltan campos obligatorios` | El cuerpo de la petición POST está incompleto | Revisar que el JSON incluye todos los campos requeridos |
+| `El campo id_interlocutor es obligatorio` | POST `/api/ingresos` requiere un proveedor | Incluir `id_interlocutor` con un ID de proveedor válido |
+| `El campo id_medio_pago es obligatorio` | POST `/api/ventas` requiere medio de pago | Incluir `id_medio_pago` (1=Efectivo, 2=Tarjeta, 3=Transferencia) |
+| `Stock insuficiente` | Se intentó vender más de lo disponible | Verificar stock con GET `/api/productos`. Registrar un ingreso primero |
+
+### 10.9 Flujo de prueba recomendado
+
+Para probar el sistema completo, seguir este orden:
+
+```
+1. GET  /api/health              → Verificar que el servidor funciona
+2. GET  /api/productos           → Ver productos iniciales (stock = 0)
+3. POST /api/productos           → Crear un producto nuevo
+4. POST /api/ingresos            → Ingresar mercadería (stock sube vía trigger)
+5. GET  /api/productos           → Verificar que el stock aumentó
+6. POST /api/ventas              → Vender productos (stock baja vía trigger)
+7. GET  /api/productos           → Verificar que el stock bajó
+8. POST /api/ventas (exceso)     → Intentar vender más del stock → error 400
+9. GET  /api/productos/bajo-stock→ Ver productos bajo stock mínimo
+10. GET /api/dashboard            → Ver KPIs del negocio
+```
 
 ## 11. Próximos pasos
 
