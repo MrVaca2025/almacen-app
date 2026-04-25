@@ -15,18 +15,23 @@
     <!-- HEADER                -->
     <!-- ===================== -->
     <header class="app-header">
-      <h1>Sistema de Gestión de Almacén</h1>
+      <h1>📦 Sistema de Gestión de Almacén</h1>
       <p class="subtitle">Control de stock, ventas e ingresos</p>
     </header>
+
+    <!-- ===================== -->
+    <!-- STOCK ALERT BANNER    -->
+    <!-- ===================== -->
+    <div id="stock-alert" class="stock-alert" style="display:none;" onclick="verBajoStock()"></div>
 
     <!-- ===================== -->
     <!-- NAVIGATION BUTTONS    -->
     <!-- ===================== -->
     <nav class="nav-buttons">
-      <button onclick="cargarProductos()">Cargar productos</button>
-      <button onclick="verBajoStock()">Ver bajo stock</button>
-      <button onclick="verDashboard()">Ver dashboard</button>
-      <button onclick="verHistorialVentas()">Ver historial de ventas</button>
+      <button onclick="cargarProductos()">📋 Cargar productos</button>
+      <button onclick="verBajoStock()">⚠️ Ver bajo stock</button>
+      <button onclick="verDashboard()">📊 Ver dashboard</button>
+      <button onclick="verHistorialVentas()">🕐 Ver historial de ventas</button>
     </nav>
 
     <!-- ===================== -->
@@ -38,7 +43,7 @@
       <label for="filtro-hasta">Hasta:</label>
       <input type="date" id="filtro-hasta">
       <button onclick="filtrarVentas()">Filtrar ventas</button>
-      <button class="btn-csv" onclick="exportarCSV()">Exportar a Excel (CSV)</button>
+      <button class="btn-csv" onclick="exportarCSV()">📥 Exportar a Excel (CSV)</button>
     </div>
 
     <!-- ===================== -->
@@ -55,7 +60,7 @@
       <!-- SALE CART (multi-product)  -->
       <!-- ========================= -->
       <div class="form-card card">
-        <h2>Registrar Venta</h2>
+        <h2>🛒 Registrar Venta</h2>
 
         <!-- Payment method -->
         <label for="venta-medio-pago">Medio de pago</label>
@@ -82,7 +87,7 @@
 
         <!-- Cart table -->
         <div id="carrito-container" style="display:none; margin-top:16px;">
-          <h3>Carrito</h3>
+          <h3>Carrito de venta</h3>
           <table id="carrito-tabla">
             <thead>
               <tr><th>Producto</th><th>Cant.</th><th>P. Unit.</th><th>Subtotal</th><th></th></tr>
@@ -98,28 +103,43 @@
         <div id="msg-venta" class="msg"></div>
       </div>
 
-      <!-- ========================= -->
-      <!-- FORM: Registrar Ingreso   -->
-      <!-- ========================= -->
+      <!-- ================================ -->
+      <!-- INGRESO CART (multi-product)     -->
+      <!-- ================================ -->
       <div class="form-card card">
-        <h2>Registrar Ingreso</h2>
-        <form id="form-ingreso" onsubmit="registrarIngreso(event)">
-          <label for="ingreso-interlocutor">Proveedor (ID)</label>
-          <input type="number" id="ingreso-interlocutor" placeholder="Ej: 2 (Distribuidora Central)" required>
+        <h2>📥 Recepción de Mercadería</h2>
 
-          <label for="ingreso-producto">Producto</label>
-          <select id="ingreso-producto" required>
-            <option value="">-- Cargando productos... --</option>
-          </select>
+        <label for="ingreso-interlocutor">Proveedor (ID)</label>
+        <input type="number" id="ingreso-interlocutor" placeholder="Ej: 2 (Distribuidora Central)">
 
-          <label for="ingreso-cantidad">Cantidad ingresada</label>
-          <input type="number" id="ingreso-cantidad" placeholder="Cantidad a ingresar" min="1" required>
+        <label for="ingreso-producto">Producto</label>
+        <select id="ingreso-producto">
+          <option value="">-- Cargando productos... --</option>
+        </select>
 
-          <label for="ingreso-precio">Precio de compra</label>
-          <input type="number" id="ingreso-precio" step="0.01" placeholder="Precio por unidad" min="0" required>
+        <label for="ingreso-cantidad">Cantidad ingresada</label>
+        <input type="number" id="ingreso-cantidad" placeholder="Cantidad a ingresar" min="1">
 
-          <button type="submit" id="btn-registrar-ingreso" disabled>Registrar ingreso</button>
-        </form>
+        <label for="ingreso-precio">Precio de compra</label>
+        <input type="number" id="ingreso-precio" step="0.01" placeholder="Precio por unidad" min="0">
+
+        <button type="button" id="btn-agregar-ingreso" class="btn-secondary" onclick="agregarAlIngresoCart()" disabled>Agregar al ingreso</button>
+
+        <!-- Ingreso cart table -->
+        <div id="ingreso-cart-container" style="display:none; margin-top:16px;">
+          <h3>Carrito de ingreso</h3>
+          <table id="ingreso-cart-tabla">
+            <thead>
+              <tr><th>Producto</th><th>Cant.</th><th>P. Compra</th><th>Subtotal</th><th></th></tr>
+            </thead>
+            <tbody id="ingreso-cart-body"></tbody>
+            <tfoot>
+              <tr><td colspan="3"><strong>Total</strong></td><td id="ingreso-cart-total"><strong>$0</strong></td><td></td></tr>
+            </tfoot>
+          </table>
+          <button type="button" id="btn-registrar-ingreso" onclick="registrarIngreso()">Registrar ingreso</button>
+        </div>
+
         <div id="msg-ingreso" class="msg"></div>
       </div>
 
