@@ -131,21 +131,35 @@ No se considera en la primera versión:
 
 ## 10. Backend (Node.js + Express)
 
-### Requisitos previos (Windows)
+### 10.1 Requisitos previos (Windows)
 
-- [Node.js](https://nodejs.org/) v18 o superior instalado.
-- MySQL 8 corriendo en `localhost:3306` con la base de datos `almacen_db` creada (ejecutar los scripts en `/database` en orden).
+1. Instalar [Node.js](https://nodejs.org/) v18 o superior.
+2. Tener MySQL 8 corriendo en `localhost:3306`.
+3. Crear la base de datos ejecutando los scripts SQL en orden:
+   ```sql
+   source database/crear_db.sql;
+   source database/insertar_rol.sql;
+   source database/insertar_producto.sql;
+   source database/trigger_detalles.sql;
+   source database/trigger_no_negative_stock.sql;
+   ```
 
-### Instalación
+### 10.2 Instalación paso a paso
+
+**Paso 1** — Instalar dependencias:
 
 ```bash
 cd backend
 npm install
 ```
 
-### Configuración
+**Paso 2** — Crear archivo de configuración:
 
-Crear un archivo `.env` dentro de `backend/` basado en `.env.example`:
+```bash
+copy .env.example .env
+```
+
+**Paso 3** — Editar `.env` con tus credenciales de MySQL:
 
 ```
 DB_HOST=localhost
@@ -156,27 +170,41 @@ DB_PORT=3306
 PORT=3000
 ```
 
-### Ejecutar en modo desarrollo
+> **Nota:** Nunca subas el archivo `.env` al repositorio. Ya está incluido en `.gitignore`.
+
+**Paso 4** — Iniciar el servidor en modo desarrollo:
 
 ```bash
-cd backend
 npm run dev
 ```
 
-### Verificar que funciona
+**Paso 5** — Verificar que funciona:
 
-Abrir en el navegador o con `curl`:
-
-```
-GET http://localhost:3000/api/health
-```
+Abrir en el navegador: `http://localhost:3000/api/health`
 
 Respuesta esperada:
+
 ```json
 { "status": "OK", "timestamp": "2025-04-25T..." }
 ```
 
-### Endpoints disponibles
+### 10.3 Estructura del backend
+
+```
+backend/
+├── server.js              # Punto de entrada, configura Express y monta rutas
+├── db.js                  # Pool de conexiones MySQL (mysql2/promise)
+├── routes/
+│   ├── productos.js       # CRUD de productos y consulta bajo stock
+│   ├── ingresos.js        # Registro de ingresos (stock vía trigger)
+│   ├── ventas.js          # Registro de ventas (stock vía trigger)
+│   └── dashboard.js       # KPIs del negocio
+├── .env.example           # Plantilla de variables de entorno
+├── .gitignore             # Ignora node_modules/ y .env
+└── package.json           # Dependencias y scripts
+```
+
+### 10.4 Endpoints disponibles
 
 | Método | Ruta                      | Descripción                          |
 |--------|---------------------------|--------------------------------------|
@@ -188,30 +216,53 @@ Respuesta esperada:
 | POST   | /api/ventas               | Registrar una venta                  |
 | GET    | /api/dashboard            | KPIs y resumen del negocio           |
 
-### Ejemplos de peticiones
+### 10.5 Interacción con triggers de MySQL
+
+El backend **no modifica el stock directamente**. Todo se maneja con triggers en la base de datos:
+
+| Trigger                        | Tabla afectada     | Efecto                                                         |
+|-------------------------------|--------------------|----------------------------------------------------------------|
+| `trg_aumentar_stock_ingreso`  | `detalle_ingreso`  | Aumenta `stock_actual` si `estado_recepcion = 'aceptado'`      |
+| `trg_disminuir_stock_venta`   | `detalle_venta`    | Disminuye `stock_actual` por `cantidad_vendida`                |
+| `trg_no_stock_negativo`       | `producto`         | Bloquea UPDATE si `stock_actual` quedaría negativo (SQLSTATE 45000) |
+
+Cuando una venta intenta vender más stock del disponible, el trigger lanza un error que el backend captura y devuelve como HTTP 400.
+
+### 10.6 Ejemplos de peticiones
 
 #### Crear un producto
 
 ```bash
-curl -X POST http://localhost:3000/api/productos \
-  -H "Content-Type: application/json" \
+curl -X POST http://localhost:3000/api/productos ^
+  -H "Content-Type: application/json" ^
   -d "{\"nombre\": \"Galletas\", \"descripcion\": \"Galletas de chocolate\", \"precio_venta\": 500, \"stock_minimo\": 10, \"unidad_venta\": \"unidad\", \"unidad_compra\": \"caja\", \"factor_conversion\": 12, \"activo\": true, \"id_categoria\": 2}"
 ```
 
 #### Registrar un ingreso de mercadería
 
 ```bash
-curl -X POST http://localhost:3000/api/ingresos \
-  -H "Content-Type: application/json" \
+curl -X POST http://localhost:3000/api/ingresos ^
+  -H "Content-Type: application/json" ^
   -d "{\"id_interlocutor\": 2, \"observacion\": \"Compra semanal\", \"detalles\": [{\"id_producto\": 1, \"cantidad_ingresada\": 48, \"precio_compra\": 500, \"estado_recepcion\": \"aceptado\"}]}"
 ```
+
+> Esto aumentará automáticamente el stock del producto 1 en 48 unidades (vía trigger).
 
 #### Registrar una venta
 
 ```bash
-curl -X POST http://localhost:3000/api/ventas \
-  -H "Content-Type: application/json" \
+curl -X POST http://localhost:3000/api/ventas ^
+  -H "Content-Type: application/json" ^
   -d "{\"id_medio_pago\": 1, \"observacion\": \"Venta al contado\", \"detalles\": [{\"id_producto\": 1, \"cantidad_vendida\": 2, \"precio_unitario\": 800}]}"
+```
+
+> Esto disminuirá automáticamente el stock del producto 1 en 2 unidades (vía trigger).
+> Si no hay stock suficiente, retorna error 400.
+
+#### Consultar productos bajo stock
+
+```bash
+curl http://localhost:3000/api/productos/bajo-stock
 ```
 
 #### Consultar dashboard
@@ -219,6 +270,8 @@ curl -X POST http://localhost:3000/api/ventas \
 ```bash
 curl http://localhost:3000/api/dashboard
 ```
+
+> **Nota para Windows:** Los ejemplos usan `^` como carácter de continuación de línea (CMD). En PowerShell, usar `` ` `` en su lugar. En Git Bash, usar `\`.
 
 ## 11. Próximos pasos
 

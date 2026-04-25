@@ -1,11 +1,18 @@
+// routes/dashboard.js — Business KPI endpoint
+// Queries are based on the dashboard SQL in database/04_consultas_dashboard.sql.
+// Returns a summary object with general KPIs, sales metrics, low-stock products,
+// and top-selling products.
+
 const { Router } = require('express');
 const pool = require('../db');
 
 const router = Router();
 
-// GET /api/dashboard - general KPIs
+// GET /api/dashboard — General business indicators
 router.get('/', async (_req, res) => {
   try {
+    // General KPIs: active products, total sales count, total ingresos count,
+    // total revenue, and count of products below minimum stock
     const [[kpis]] = await pool.query(
       `SELECT
          (SELECT COUNT(*) FROM producto WHERE activo = TRUE) AS productos_activos,
@@ -16,6 +23,7 @@ router.get('/', async (_req, res) => {
             WHERE stock_actual <= stock_minimo AND activo = TRUE) AS productos_bajo_stock`
     );
 
+    // Sales KPIs: total revenue, number of sales, average ticket
     const [ventasKpi] = await pool.query(
       `SELECT
          COALESCE(SUM(total_venta), 0) AS ventas_totales,
@@ -26,6 +34,7 @@ router.get('/', async (_req, res) => {
        FROM venta`
     );
 
+    // Products below minimum stock, ordered by deficit (most critical first)
     const [productosBajoStock] = await pool.query(
       `SELECT nombre, stock_actual, stock_minimo,
               (stock_minimo - stock_actual) AS deficit
@@ -34,6 +43,7 @@ router.get('/', async (_req, res) => {
        ORDER BY deficit DESC`
     );
 
+    // Top 10 best-selling products by units sold
     const [masVendidos] = await pool.query(
       `SELECT p.nombre, SUM(dv.cantidad_vendida) AS total_vendido
        FROM detalle_venta dv

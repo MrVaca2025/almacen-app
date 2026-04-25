@@ -1,3 +1,7 @@
+// db.js — MySQL connection pool
+// Uses mysql2/promise for async/await support.
+// All connection settings come from environment variables (.env file).
+
 const mysql = require('mysql2/promise');
 
 const pool = mysql.createPool({
