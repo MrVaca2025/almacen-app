@@ -4,7 +4,7 @@ from utils.validators import input_int, input_float
 
 
 def register_ingreso():
-    header("REGISTER INGRESO (STOCK IN)")
+    header("REGISTRAR INGRESO")
 
     conn = get_connection()
     products = conn.execute(
@@ -13,17 +13,17 @@ def register_ingreso():
 
     if not products:
         conn.close()
-        error("No active products available.")
+        error("No hay productos activos disponibles.")
         return
 
-    headers = ["ID", "Name", "Current Stock"]
+    headers = ["ID", "Nombre", "Stock Actual"]
     data = [(p["id"], p["nombre"], p["stock_actual"]) for p in products]
     print_table(headers, data)
 
     items = []
     while True:
         separator()
-        product_id = input_int("  Product ID (0 to finish): ")
+        product_id = input_int("  ID del producto (0 para terminar): ")
         if product_id == 0:
             break
 
@@ -33,17 +33,17 @@ def register_ingreso():
         ).fetchone()
 
         if not product:
-            error("Product not found or inactive.")
+            error("Producto no encontrado o inactivo.")
             continue
 
-        cantidad = input_int("  Quantity: ")
+        cantidad = input_int("  Cantidad: ")
         if cantidad <= 0:
-            error("Quantity must be greater than 0.")
+            error("La cantidad debe ser mayor a 0.")
             continue
 
-        precio_compra = input_float("  Purchase price per unit: ")
+        precio_compra = input_float("  Precio de compra por unidad: ")
         if precio_compra < 0:
-            error("Purchase price must be >= 0.")
+            error("El precio de compra debe ser >= 0.")
             continue
 
         items.append({
@@ -53,17 +53,17 @@ def register_ingreso():
             "precio_compra": precio_compra,
             "subtotal": cantidad * precio_compra,
         })
-        success(f"Added {cantidad}x {product['nombre']}.")
+        success(f"Agregado {cantidad}x {product['nombre']}.")
 
     if not items:
         conn.close()
-        info("Ingreso cancelled. No products added.")
+        info("Ingreso cancelado. No se agregaron productos.")
         return
 
     total = sum(item["subtotal"] for item in items)
 
-    header("INGRESO SUMMARY")
-    summary_headers = ["Product", "Qty", "Unit Cost", "Subtotal"]
+    header("RESUMEN DE INGRESO")
+    summary_headers = ["Producto", "Cant", "Costo Unit.", "Subtotal"]
     summary_data = [
         (item["nombre"], item["cantidad"],
          format_currency(item["precio_compra"]),
@@ -74,10 +74,10 @@ def register_ingreso():
     print(f"  TOTAL: {format_currency(total)}")
     separator()
 
-    confirm = input("  Confirm ingreso? (y/n): ").strip().lower()
-    if confirm != "y":
+    confirm = input("  ¿Confirmar ingreso? (s/n): ").strip().lower()
+    if confirm != "s":
         conn.close()
-        info("Ingreso cancelled.")
+        info("Ingreso cancelado.")
         return
 
     cursor = conn.cursor()
@@ -98,4 +98,4 @@ def register_ingreso():
 
     conn.commit()
     conn.close()
-    success(f"Ingreso #{ingreso_id} registered successfully. Total: {format_currency(total)}")
+    success(f"Ingreso #{ingreso_id} registrado exitosamente. Total: {format_currency(total)}")

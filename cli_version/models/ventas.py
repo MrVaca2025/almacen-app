@@ -4,7 +4,7 @@ from utils.validators import input_int
 
 
 def register_sale():
-    header("REGISTER SALE")
+    header("REGISTRAR VENTA")
 
     conn = get_connection()
     products = conn.execute(
@@ -14,10 +14,10 @@ def register_sale():
 
     if not products:
         conn.close()
-        error("No active products available.")
+        error("No hay productos activos disponibles.")
         return
 
-    headers = ["ID", "Name", "Price", "Stock"]
+    headers = ["ID", "Nombre", "Precio", "Stock"]
     data = [
         (p["id"], p["nombre"], format_currency(p["precio_venta"]), p["stock_actual"])
         for p in products
@@ -27,7 +27,7 @@ def register_sale():
     cart = []
     while True:
         separator()
-        product_id = input_int("  Product ID (0 to finish): ")
+        product_id = input_int("  ID del producto (0 para terminar): ")
         if product_id == 0:
             break
 
@@ -38,12 +38,12 @@ def register_sale():
         ).fetchone()
 
         if not product:
-            error("Product not found or inactive.")
+            error("Producto no encontrado o inactivo.")
             continue
 
-        cantidad = input_int("  Quantity: ")
+        cantidad = input_int("  Cantidad: ")
         if cantidad <= 0:
-            error("Quantity must be greater than 0.")
+            error("La cantidad debe ser mayor a 0.")
             continue
 
         already_in_cart = sum(
@@ -53,8 +53,8 @@ def register_sale():
 
         if cantidad > available:
             error(
-                f"Insufficient stock. Available: {available} "
-                f"(total: {product['stock_actual']}, in cart: {already_in_cart})"
+                f"Stock insuficiente. Disponible: {available} "
+                f"(total: {product['stock_actual']}, en carrito: {already_in_cart})"
             )
             continue
 
@@ -65,17 +65,17 @@ def register_sale():
             "precio_unitario": product["precio_venta"],
             "subtotal": cantidad * product["precio_venta"],
         })
-        success(f"Added {cantidad}x {product['nombre']} to cart.")
+        success(f"Agregado {cantidad}x {product['nombre']} al carrito.")
 
     if not cart:
         conn.close()
-        info("Sale cancelled. No products added.")
+        info("Venta cancelada. No se agregaron productos.")
         return
 
     total = sum(item["subtotal"] for item in cart)
 
-    header("SALE RECEIPT")
-    receipt_headers = ["Product", "Qty", "Unit Price", "Subtotal"]
+    header("BOLETA DE VENTA")
+    receipt_headers = ["Producto", "Cant", "Precio Unit.", "Subtotal"]
     receipt_data = [
         (item["nombre"], item["cantidad"],
          format_currency(item["precio_unitario"]),
@@ -86,10 +86,10 @@ def register_sale():
     print(f"  TOTAL: {format_currency(total)}")
     separator()
 
-    confirm = input("  Confirm sale? (y/n): ").strip().lower()
-    if confirm != "y":
+    confirm = input("  ¿Confirmar venta? (s/n): ").strip().lower()
+    if confirm != "s":
         conn.close()
-        info("Sale cancelled.")
+        info("Venta cancelada.")
         return
 
     cursor = conn.cursor()
@@ -110,4 +110,4 @@ def register_sale():
 
     conn.commit()
     conn.close()
-    success(f"Sale #{venta_id} registered successfully. Total: {format_currency(total)}")
+    success(f"Venta #{venta_id} registrada exitosamente. Total: {format_currency(total)}")

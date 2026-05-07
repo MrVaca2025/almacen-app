@@ -13,16 +13,16 @@ from utils.formatters import header
 
 
 def main_menu():
-    header("INVENTORY SYSTEM (CLI)")
-    print("  1. View products")
-    print("  2. Create product")
-    print("  3. Edit product")
-    print("  4. Activate/Deactivate product")
-    print("  5. Register ingreso (stock in)")
-    print("  6. Register sale")
-    print("  7. View kardex")
+    header("SISTEMA DE INVENTARIO (CLI)")
+    print("  1. Ver productos")
+    print("  2. Crear producto")
+    print("  3. Editar producto")
+    print("  4. Activar/Desactivar producto")
+    print("  5. Registrar ingreso")
+    print("  6. Registrar venta")
+    print("  7. Ver kardex")
     print("  8. Dashboard")
-    print("  0. Exit")
+    print("  0. Salir")
     print()
 
 
@@ -42,10 +42,10 @@ def main():
 
     while True:
         main_menu()
-        choice = input("  Select an option: ").strip()
+        choice = input("  Seleccione una opción: ").strip()
 
         if choice == "0":
-            print("\n  Goodbye!\n")
+            print("\n  ¡Hasta luego!\n")
             break
 
         action = actions.get(choice)
@@ -53,13 +53,13 @@ def main():
             try:
                 action()
             except KeyboardInterrupt:
-                print("\n\n  Operation cancelled.")
+                print("\n\n  Operación cancelada.")
             except Exception as e:
                 print(f"\n  [ERROR] {e}")
         else:
-            print("\n  [ERROR] Invalid option. Try again.")
+            print("\n  [ERROR] Opción inválida. Intente de nuevo.")
 
-        input("\n  Press Enter to continue...")
+        input("\n  Presione Enter para continuar...")
 
 
 if __name__ == "__main__":

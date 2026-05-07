@@ -5,7 +5,7 @@ from utils.validators import input_text, input_float, input_int
 
 
 def list_products():
-    header("PRODUCT LIST")
+    header("LISTA DE PRODUCTOS")
     conn = get_connection()
     rows = conn.execute(
         "SELECT id, nombre, precio_venta, stock_actual, stock_minimo, activo "
@@ -14,43 +14,43 @@ def list_products():
     conn.close()
 
     if not rows:
-        print("  No products registered yet.")
+        print("  No hay productos registrados.")
         return
 
-    headers = ["ID", "Name", "Price", "Stock", "Min", "Active"]
+    headers = ["ID", "Nombre", "Precio", "Stock", "Mín", "Activo"]
     data = [
         (r["id"], r["nombre"], f"${r['precio_venta']:,.0f}",
          r["stock_actual"], r["stock_minimo"],
-         "Yes" if r["activo"] else "No")
+         "Sí" if r["activo"] else "No")
         for r in rows
     ]
     print_table(headers, data)
 
 
 def create_product():
-    header("CREATE PRODUCT")
+    header("CREAR PRODUCTO")
 
-    nombre = input_text("  Name: ")
+    nombre = input_text("  Nombre: ")
     ok, msg = validate_name(nombre)
     if not ok:
         error(msg)
         return
 
-    descripcion = input_text("  Description (optional): ", allow_empty=True)
+    descripcion = input_text("  Descripción (opcional): ", allow_empty=True)
 
-    precio = input_float("  Sale price: ")
+    precio = input_float("  Precio de venta: ")
     ok, msg = validate_price(precio)
     if not ok:
         error(msg)
         return
 
-    stock = input_int("  Initial stock: ")
+    stock = input_int("  Stock inicial: ")
     ok, msg = validate_stock(stock)
     if not ok:
         error(msg)
         return
 
-    stock_min = input_int("  Minimum stock: ")
+    stock_min = input_int("  Stock mínimo: ")
     ok, msg = validate_stock(stock_min)
     if not ok:
         error(msg)
@@ -64,14 +64,14 @@ def create_product():
     )
     conn.commit()
     conn.close()
-    success(f"Product '{nombre}' created successfully.")
+    success(f"Producto '{nombre}' creado exitosamente.")
 
 
 def edit_product():
-    header("EDIT PRODUCT")
+    header("EDITAR PRODUCTO")
     list_products()
 
-    product_id = input_int("  Enter product ID to edit: ")
+    product_id = input_int("  Ingrese ID del producto a editar: ")
 
     conn = get_connection()
     product = conn.execute(
@@ -80,24 +80,24 @@ def edit_product():
 
     if not product:
         conn.close()
-        error(f"Product with ID {product_id} not found.")
+        error(f"Producto con ID {product_id} no encontrado.")
         return
 
-    print(f"\n  Editing: {product['nombre']}")
-    print("  (Press Enter to keep current value)\n")
+    print(f"\n  Editando: {product['nombre']}")
+    print("  (Presione Enter para mantener el valor actual)\n")
 
     nombre = input_text(
-        f"  Name [{product['nombre']}]: ", allow_empty=True
+        f"  Nombre [{product['nombre']}]: ", allow_empty=True
     ) or product["nombre"]
 
     descripcion = input_text(
-        f"  Description [{product['descripcion']}]: ", allow_empty=True
+        f"  Descripción [{product['descripcion']}]: ", allow_empty=True
     )
     if descripcion == "":
         descripcion = product["descripcion"]
 
     precio_raw = input_float(
-        f"  Price [{product['precio_venta']}]: ", allow_empty=True
+        f"  Precio [{product['precio_venta']}]: ", allow_empty=True
     )
     precio = precio_raw if precio_raw is not None else product["precio_venta"]
     ok, msg = validate_price(precio)
@@ -107,7 +107,7 @@ def edit_product():
         return
 
     stock_min_raw = input_int(
-        f"  Min stock [{product['stock_minimo']}]: ", allow_empty=True
+        f"  Stock mínimo [{product['stock_minimo']}]: ", allow_empty=True
     )
     stock_min = stock_min_raw if stock_min_raw is not None else product["stock_minimo"]
     ok, msg = validate_stock(stock_min)
@@ -123,14 +123,14 @@ def edit_product():
     )
     conn.commit()
     conn.close()
-    success(f"Product '{nombre}' updated successfully.")
+    success(f"Producto '{nombre}' actualizado exitosamente.")
 
 
 def toggle_product():
-    header("ACTIVATE / DEACTIVATE PRODUCT")
+    header("ACTIVAR / DESACTIVAR PRODUCTO")
     list_products()
 
-    product_id = input_int("  Enter product ID to toggle: ")
+    product_id = input_int("  Ingrese ID del producto: ")
 
     conn = get_connection()
     product = conn.execute(
@@ -139,11 +139,11 @@ def toggle_product():
 
     if not product:
         conn.close()
-        error(f"Product with ID {product_id} not found.")
+        error(f"Producto con ID {product_id} no encontrado.")
         return
 
     new_status = 0 if product["activo"] else 1
-    label = "activated" if new_status else "deactivated"
+    label = "activado" if new_status else "desactivado"
 
     conn.execute(
         "UPDATE productos SET activo = ? WHERE id = ?",
@@ -151,4 +151,4 @@ def toggle_product():
     )
     conn.commit()
     conn.close()
-    success(f"Product '{product['nombre']}' {label}.")
+    success(f"Producto '{product['nombre']}' {label}.")

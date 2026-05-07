@@ -4,7 +4,7 @@ from utils.validators import input_int
 
 
 def view_kardex():
-    header("KARDEX - INVENTORY MOVEMENTS")
+    header("KARDEX - MOVIMIENTOS DE INVENTARIO")
 
     conn = get_connection()
     products = conn.execute(
@@ -13,14 +13,14 @@ def view_kardex():
 
     if not products:
         conn.close()
-        error("No products registered.")
+        error("No hay productos registrados.")
         return
 
-    headers = ["ID", "Name", "Current Stock"]
+    headers = ["ID", "Nombre", "Stock Actual"]
     data = [(p["id"], p["nombre"], p["stock_actual"]) for p in products]
     print_table(headers, data)
 
-    product_id = input_int("  Enter product ID to view kardex: ")
+    product_id = input_int("  Ingrese ID del producto para ver kardex: ")
 
     product = conn.execute(
         "SELECT id, nombre, stock_actual FROM productos WHERE id = ?",
@@ -29,7 +29,7 @@ def view_kardex():
 
     if not product:
         conn.close()
-        error(f"Product with ID {product_id} not found.")
+        error(f"Producto con ID {product_id} no encontrado.")
         return
 
     header(f"KARDEX: {product['nombre']}")
@@ -73,12 +73,12 @@ def view_kardex():
     movements.sort(key=lambda m: m["fecha"])
 
     if not movements:
-        print("  No movements found for this product.")
+        print("  No se encontraron movimientos para este producto.")
         conn.close()
         return
 
     running_stock = 0
-    kardex_headers = ["Date", "Type", "Qty", "Price", "Stock"]
+    kardex_headers = ["Fecha", "Tipo", "Cant", "Precio", "Stock"]
     kardex_data = []
 
     for mov in movements:
@@ -96,6 +96,6 @@ def view_kardex():
         ))
 
     print_table(kardex_headers, kardex_data)
-    print(f"  Current stock in DB: {product['stock_actual']}")
+    print(f"  Stock actual en BD: {product['stock_actual']}")
 
     conn.close()

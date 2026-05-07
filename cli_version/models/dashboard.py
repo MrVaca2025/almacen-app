@@ -3,7 +3,7 @@ from utils.formatters import header, format_currency, separator, print_table
 
 
 def show_dashboard():
-    header("DASHBOARD")
+    header("PANEL DE CONTROL")
     conn = get_connection()
 
     # Total revenue (sales)
@@ -36,13 +36,13 @@ def show_dashboard():
     inactive_products = row["inactive"] or 0
 
     print(f"""
-  Total Revenue:       {format_currency(total_revenue)}
-  Total Ingresos:      {format_currency(total_ingresos)}
-  Estimated Profit:    {format_currency(estimated_profit)}
-  Number of Sales:     {num_sales}
-  Number of Ingresos:  {num_ingresos}
-  Active Products:     {active_products}
-  Inactive Products:   {inactive_products}
+  Ingresos por Ventas:   {format_currency(total_revenue)}
+  Total Ingresos:        {format_currency(total_ingresos)}
+  Ganancia Estimada:     {format_currency(estimated_profit)}
+  Cantidad de Ventas:    {num_sales}
+  Cantidad de Ingresos:  {num_ingresos}
+  Productos Activos:     {active_products}
+  Productos Inactivos:   {inactive_products}
     """)
 
     separator()
@@ -57,9 +57,9 @@ def show_dashboard():
     ).fetchone()
 
     if most_sold:
-        print(f"  Most Sold Product:  {most_sold['nombre']} ({most_sold['total_qty']} units)")
+        print(f"  Producto Más Vendido:  {most_sold['nombre']} ({most_sold['total_qty']} unidades)")
     else:
-        print("  Most Sold Product:  N/A (no sales yet)")
+        print("  Producto Más Vendido:  N/A (sin ventas aún)")
 
     separator()
 
@@ -72,15 +72,15 @@ def show_dashboard():
     ).fetchall()
 
     if low_stock:
-        print("\n  LOW STOCK PRODUCTS:")
-        ls_headers = ["ID", "Name", "Stock", "Min"]
+        print("\n  PRODUCTOS CON STOCK BAJO:")
+        ls_headers = ["ID", "Nombre", "Stock", "Mín"]
         ls_data = [
             (r["id"], r["nombre"], r["stock_actual"], r["stock_minimo"])
             for r in low_stock
         ]
         print_table(ls_headers, ls_data)
     else:
-        print("\n  No products below minimum stock.")
+        print("\n  No hay productos bajo stock mínimo.")
 
     separator()
 
@@ -94,8 +94,8 @@ def show_dashboard():
     ).fetchall()
 
     if top_revenue:
-        print("\n  TOP 5 PRODUCTS BY REVENUE:")
-        tr_headers = ["Product", "Revenue"]
+        print("\n  TOP 5 PRODUCTOS POR INGRESOS:")
+        tr_headers = ["Producto", "Ingresos"]
         tr_data = [
             (r["nombre"], format_currency(r["revenue"]))
             for r in top_revenue
