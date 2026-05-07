@@ -820,7 +820,97 @@ Usa `window.open()` + `window.print()` en ventana separada con estilos limpios.
 6. **Dashboard avanzado**: Ver dashboard → verificar "Producto más rotado" y "Días de stock"
 7. **PDF export**: Historial ventas → "Exportar PDF" → se abre ventana para imprimir
 
-## 12. Próximos pasos
+## 12. Lanzador Unificado (Unified Launcher)
+
+El proyecto incluye un **lanzador unificado** que permite iniciar cualquiera de los dos sistemas desde un solo punto de entrada, sin modificar la lógica de negocio existente.
+
+### 12.1 Estructura del lanzador
+
+```
+├── launcher.py     # Lanzador principal (Python, cross-platform)
+├── setup.py        # Utilidad de instalación de dependencias
+├── start.sh        # Script de inicio para Linux / macOS
+└── start.bat       # Script de inicio para Windows
+```
+
+### 12.2 Inicio rápido
+
+**Linux / macOS:**
+
+```bash
+./start.sh
+```
+
+**Windows:**
+
+```bat
+start.bat
+```
+
+**Cualquier plataforma (con Python 3):**
+
+```bash
+python3 launcher.py
+```
+
+### 12.3 Menú interactivo
+
+Al ejecutar el lanzador sin argumentos se muestra:
+
+```
+╔══════════════════════════════════════════════════╗
+║          STOCKCONTROL — Lanzador Unificado       ║
+╚══════════════════════════════════════════════════╝
+
+  1. Iniciar versión Web    (Node.js + MySQL)
+  2. Iniciar versión CLI    (Python + SQLite)
+  3. Ver estado del sistema
+  4. Instalar dependencias
+  0. Salir
+```
+
+### 12.4 Comandos directos (sin menú)
+
+| Comando | Descripción |
+|---------|-------------|
+| `python3 launcher.py web` | Inicia la versión Web directamente |
+| `python3 launcher.py cli` | Inicia la versión CLI directamente |
+| `python3 launcher.py status` | Muestra el estado de dependencias |
+| `python3 launcher.py setup` | Ejecuta la instalación de dependencias |
+| `./start.sh web` | Inicia versión Web (Linux/macOS) |
+| `./start.sh cli` | Inicia versión CLI (Linux/macOS) |
+| `start.bat web` | Inicia versión Web (Windows) |
+| `start.bat cli` | Inicia versión CLI (Windows) |
+
+### 12.5 Instalación de dependencias
+
+```bash
+python3 setup.py
+```
+
+Esto verifica:
+- Node.js y npm (para versión Web)
+- Python 3 (para versión CLI)
+- Ejecuta `npm install` en `backend/`
+- Crea `.env` desde `.env.example` si no existe
+- Verifica que `cli_version/main.py` existe
+
+Para solo verificar sin instalar:
+
+```bash
+python3 setup.py --check
+```
+
+### 12.6 Sistemas disponibles
+
+| Sistema | Tecnología | Base de datos | Interfaz |
+|---------|-----------|---------------|----------|
+| **Web** | Node.js + Express | MySQL | Navegador (HTML/CSS/JS) |
+| **CLI** | Python 3 | SQLite | Terminal |
+
+Ambos sistemas son **completamente independientes** y pueden ejecutarse por separado.
+
+## 13. Próximos pasos
 
 1. Implementar roles con permisos diferenciados.
 2. Agregar gestión de proveedores.
