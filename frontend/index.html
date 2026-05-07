@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sistema de Gestión de Almacén</title>
+  <link rel="stylesheet" href="styles.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+</head>
+<body>
+
+  <!-- ===================== -->
+  <!-- LOGIN SCREEN          -->
+  <!-- ===================== -->
+  <div id="login-modal" class="login-screen" style="display:none;">
+    <div class="login-card">
+      <h1>📦 Almacén</h1>
+      <p class="login-subtitle">Sistema de Gestión de Inventario</p>
+      <label for="login-username">Usuario</label>
+      <input type="text" id="login-username" placeholder="Nombre de usuario" autocomplete="username">
+      <label for="login-password">Contraseña</label>
+      <input type="password" id="login-password" placeholder="Contraseña" autocomplete="current-password">
+      <div id="msg-login" class="msg"></div>
+      <button id="btn-login" onclick="handleLogin()">Ingresar</button>
+      <p class="login-hint">Usuarios: admin / 1234 — vendedor / 1234</p>
+    </div>
+  </div>
+
+  <!-- ===================== -->
+  <!-- MAIN APP CONTAINER    -->
+  <!-- ===================== -->
+  <div id="app-container" class="container" style="display:none;">
+
+    <!-- HEADER -->
+    <header class="app-header">
+      <div class="header-top">
+        <div>
+          <h1>📦 Sistema de Gestión de Almacén</h1>
+          <p class="subtitle">Control de stock, ventas e ingresos</p>
+        </div>
+        <div class="session-info">
+          <span class="session-user">👤 <span id="session-username"></span></span>
+          <span class="session-badge" id="session-role"></span>
+          <button class="btn-logout" onclick="cerrarSesion()">Cerrar sesión</button>
+        </div>
+      </div>
+    </header>
+
+    <!-- STOCK ALERT BANNER -->
+    <div id="stock-alert" class="stock-alert" style="display:none;" onclick="verBajoStock()"></div>
+
+    <!-- NAVIGATION -->
+    <nav class="nav-buttons">
+      <button onclick="cargarProductos()">📋 Cargar productos</button>
+      <button onclick="verBajoStock()">⚠️ Ver bajo stock</button>
+      <button onclick="verDashboard()">📊 Ver dashboard</button>
+      <button onclick="verHistorialVentas()">🕐 Historial ventas</button>
+      <button onclick="verHistorialIngresos()">📥 Historial ingresos</button>
+    </nav>
+
+    <!-- FILTER BAR -->
+    <div id="filtro-ventas" class="filtro-ventas card">
+      <label for="filtro-desde">Desde:</label>
+      <input type="date" id="filtro-desde">
+      <label for="filtro-hasta">Hasta:</label>
+      <input type="date" id="filtro-hasta">
+      <button onclick="filtrarVentas()">Filtrar ventas</button>
+      <button onclick="filtrarIngresos()">Filtrar ingresos</button>
+      <button class="btn-csv" onclick="exportarCSV()">📥 Exportar CSV</button>
+    </div>
+
+    <!-- RESULTS AREA -->
+    <div id="resultado" class="resultado card"></div>
+
+    <!-- FORMS -->
+    <div class="forms-container">
+
+      <!-- SALE CART -->
+      <div class="form-card card">
+        <h2>🛒 Registrar Venta</h2>
+        <label for="venta-medio-pago">Medio de pago</label>
+        <select id="venta-medio-pago" required>
+          <option value="">-- Seleccionar --</option>
+          <option value="1">1 - Efectivo</option>
+          <option value="2">2 - Tarjeta</option>
+          <option value="3">3 - Transferencia</option>
+        </select>
+        <label for="venta-producto">Producto</label>
+        <select id="venta-producto"><option value="">-- Cargando productos... --</option></select>
+        <label for="venta-cantidad">Cantidad</label>
+        <input type="number" id="venta-cantidad" placeholder="Cantidad a vender" min="1">
+        <label for="venta-precio">Precio unitario</label>
+        <input type="number" id="venta-precio" step="0.01" placeholder="Precio por unidad" min="0">
+        <button type="button" id="btn-agregar-carrito" class="btn-secondary" onclick="agregarAlCarrito()" disabled>Agregar al carrito</button>
+        <div id="carrito-container" style="display:none; margin-top:16px;">
+          <h3>Carrito de venta</h3>
+          <table id="carrito-tabla">
+            <thead><tr><th>Producto</th><th>Cant.</th><th>P. Unit.</th><th>Subtotal</th><th></th></tr></thead>
+            <tbody id="carrito-body"></tbody>
+            <tfoot><tr><td colspan="3"><strong>Total</strong></td><td id="carrito-total"><strong>$0</strong></td><td></td></tr></tfoot>
+          </table>
+          <button type="button" id="btn-registrar-venta" onclick="registrarVenta()">Registrar venta</button>
+        </div>
+        <div id="msg-venta" class="msg"></div>
+      </div>
+
+      <!-- INGRESO CART -->
+      <div class="form-card card">
+        <h2>📥 Recepción de Mercadería</h2>
+        <label for="ingreso-interlocutor">Proveedor (ID)</label>
+        <input type="number" id="ingreso-interlocutor" placeholder="Ej: 2 (Distribuidora Central)">
+        <label for="ingreso-producto">Producto</label>
+        <select id="ingreso-producto"><option value="">-- Cargando productos... --</option></select>
+        <label for="ingreso-cantidad">Cantidad ingresada</label>
+        <input type="number" id="ingreso-cantidad" placeholder="Cantidad a ingresar" min="1">
+        <label for="ingreso-precio">Precio de compra</label>
+        <input type="number" id="ingreso-precio" step="0.01" placeholder="Precio por unidad" min="0">
+        <button type="button" id="btn-agregar-ingreso" class="btn-secondary" onclick="agregarAlIngresoCart()" disabled>Agregar al ingreso</button>
+        <div id="ingreso-cart-container" style="display:none; margin-top:16px;">
+          <h3>Carrito de ingreso</h3>
+          <table id="ingreso-cart-tabla">
+            <thead><tr><th>Producto</th><th>Cant.</th><th>P. Compra</th><th>Subtotal</th><th></th></tr></thead>
+            <tbody id="ingreso-cart-body"></tbody>
+            <tfoot><tr><td colspan="3"><strong>Total</strong></td><td id="ingreso-cart-total"><strong>$0</strong></td><td></td></tr></tfoot>
+          </table>
+          <button type="button" id="btn-registrar-ingreso" onclick="registrarIngreso()">Registrar ingreso</button>
+        </div>
+        <div id="msg-ingreso" class="msg"></div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ===================== -->
+  <!-- TOAST CONTAINER       -->
+  <!-- ===================== -->
+  <div id="toast-container"></div>
+
+  <!-- ===================== -->
+  <!-- RECEIPT MODAL         -->
+  <!-- ===================== -->
+  <div id="receipt-modal" class="modal-overlay" style="display:none;" onclick="cerrarRecibo(event)">
+    <div class="modal-content" onclick="event.stopPropagation()">
+      <div id="receipt-body"></div>
+      <div class="modal-actions">
+        <button class="btn-modal btn-modal-print" onclick="imprimirRecibo()">🖨️ Imprimir</button>
+        <button class="btn-modal btn-modal-print" onclick="exportarReciboPDF()">📄 PDF</button>
+        <button class="btn-modal btn-modal-close" onclick="cerrarRecibo()">Cerrar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================== -->
+  <!-- EDIT PRODUCT MODAL    -->
+  <!-- ===================== -->
+  <div id="edit-modal" class="modal-overlay" style="display:none;" onclick="cerrarEditModal(event)">
+    <div class="modal-content modal-edit" onclick="event.stopPropagation()">
+      <h2>✏️ Editar Producto</h2>
+      <input type="hidden" id="edit-id">
+      <label for="edit-nombre">Nombre</label>
+      <input type="text" id="edit-nombre" placeholder="Nombre del producto">
+      <label for="edit-precio">Precio venta</label>
+      <input type="number" id="edit-precio" min="0" step="1" placeholder="Precio de venta">
+      <label for="edit-stock-min">Stock mínimo</label>
+      <input type="number" id="edit-stock-min" min="0" step="1" placeholder="Stock mínimo">
+      <label for="edit-categoria">Categoría</label>
+      <select id="edit-categoria"><option value="">-- Cargando... --</option></select>
+      <div id="msg-edit" class="msg"></div>
+      <div class="modal-actions">
+        <button class="btn-modal btn-modal-print" id="btn-guardar-edit" onclick="guardarEdicionProducto()">Guardar cambios</button>
+        <button class="btn-modal btn-modal-close" onclick="cerrarEditModal()">Cancelar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================== -->
+  <!-- CREATE PRODUCT MODAL  -->
+  <!-- ===================== -->
+  <div id="create-modal" class="modal-overlay" style="display:none;" onclick="cerrarCreateModal(event)">
+    <div class="modal-content modal-create" onclick="event.stopPropagation()">
+      <h2>➕ Agregar Producto</h2>
+      <label for="create-nombre">Nombre *</label>
+      <input type="text" id="create-nombre" placeholder="Nombre del producto">
+      <label for="create-descripcion">Descripción</label>
+      <input type="text" id="create-descripcion" placeholder="Descripción (opcional)">
+      <div class="form-row">
+        <div class="form-col">
+          <label for="create-precio">Precio venta *</label>
+          <input type="number" id="create-precio" min="0" step="1" placeholder="0">
+        </div>
+        <div class="form-col">
+          <label for="create-stock-min">Stock mínimo *</label>
+          <input type="number" id="create-stock-min" min="0" step="1" placeholder="0">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-col">
+          <label for="create-unidad-venta">Unidad venta *</label>
+          <input type="text" id="create-unidad-venta" placeholder="Ej: unidad, kg">
+        </div>
+        <div class="form-col">
+          <label for="create-unidad-compra">Unidad compra *</label>
+          <input type="text" id="create-unidad-compra" placeholder="Ej: caja, kg">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-col">
+          <label for="create-factor">Factor conversión *</label>
+          <input type="number" id="create-factor" min="0.01" step="0.01" placeholder="1">
+        </div>
+        <div class="form-col">
+          <label for="create-categoria">Categoría *</label>
+          <select id="create-categoria"><option value="">-- Seleccionar --</option></select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-col">
+          <label for="create-activo">Estado</label>
+          <select id="create-activo">
+            <option value="1">Activo</option>
+            <option value="0">Inactivo</option>
+          </select>
+        </div>
+        <div class="form-col"></div>
+      </div>
+      <div id="msg-create" class="msg"></div>
+      <div class="modal-actions">
+        <button class="btn-modal btn-modal-print" id="btn-crear-producto" onclick="crearProducto()">Añadir producto</button>
+        <button class="btn-modal btn-modal-close" onclick="cerrarCreateModal()">Cancelar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================== -->
+  <!-- KARDEX MODAL          -->
+  <!-- ===================== -->
+  <div id="kardex-modal" class="modal-overlay" style="display:none;" onclick="cerrarKardexModal(event)">
+    <div class="modal-content modal-kardex" onclick="event.stopPropagation()">
+      <div id="kardex-body"></div>
+      <div class="modal-actions">
+        <button class="btn-modal btn-modal-print" onclick="exportarKardexPDF()">📄 Exportar PDF</button>
+        <button class="btn-modal btn-modal-close" onclick="cerrarKardexModal()">Cerrar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- JS MODULES (order matters) -->
+  <script src="js/config.js"></script>
+  <script src="js/ui.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/productos.js"></script>
+  <script src="js/ventas.js"></script>
+  <script src="js/ingresos.js"></script>
+  <script src="js/dashboard.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
